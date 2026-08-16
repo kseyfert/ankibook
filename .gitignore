@@ -12,5 +12,6 @@ yarn-error.log*
 .idea
 .claude
 
-samples
-*.txt
+/user/**
+!/user/**/
+!/user/**/.gitkeep

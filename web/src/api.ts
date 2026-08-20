@@ -50,9 +50,28 @@ export interface DiffWord {
   pos: string;
   posLabel: string;
   zipf: number;
-  count: number;
+  /**
+   * Номера строк, в которых слово встретилось — по одному на вхождение.
+   * Счётчик «в книге» считается из них с учётом выбранных границ текста:
+   * слово из лицензии в словарь не идёт, даже если встретилось двадцать раз.
+   */
+  lines: number[];
   /** книга — единственный источник слова: отказ убирает его из словаря целиком */
   onlyHere: boolean;
+}
+
+export interface Bounds {
+  /** предположение модели: первая строка основного текста */
+  start: number;
+  /** последняя строка основного текста, включительно */
+  end: number;
+  /** последняя строка файла */
+  lastLine: number;
+  /** превью строк 0…headPreviews.length-1; пустая строка = пустая в тексте */
+  headPreviews: string[];
+  /** номер строки, которой соответствует tailPreviews[0] */
+  tailFrom: number;
+  tailPreviews: string[];
 }
 
 export interface Diff {
@@ -65,6 +84,7 @@ export interface Diff {
   recordZipf: number;
   /** от чего уже отказывались по этой книге */
   excluded: string[];
+  bounds: Bounds;
   words: DiffWord[];
 }
 

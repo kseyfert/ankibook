@@ -3,13 +3,16 @@ import { writeFileSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { addBook } from '../../library/add-book.js';
-import { listBooks, loadContexts, loadDictionary, loadExcluded, loadProfile } from '../../library/files.js';
+import {
+  listBooks, loadBookText, loadContexts, loadDictionary, loadExcluded, loadProfile,
+} from '../../library/files.js';
 import { rebuild, NO_EXCLUSIONS } from '../../library/rebuild.js';
 import { isEligible, selectCandidates, type Candidate } from '../../library/score.js';
 import { loadSession, saveSession } from '../session.js';
 import { posShort } from '../../library/pos.js';
 import { llmIfConfigured } from '../../llm/index.js';
 import { tuning } from '../../config/index.js';
+import { lineIndexer, lineWindows } from '../../text/lines.js';
 
 export const books = new Hono();
 
@@ -93,6 +96,23 @@ books.get('/:hash/diff', (c) => {
   const { entries, diff } = rebuild(profile, NO_EXCLUSIONS);
   const excluded = loadExcluded(hash);
 
+  // Превью строк для ручной правки границ. Отдаём вместе с diff, а не
+  // отдельным запросом на строку: ползунок должен отзываться на каждое
+  // деление, а поход на сервер за каждым тиком этого не даёт.
+  const text = loadBookText(hash);
+  const win = lineWindows(
+    text,
+    tuning.bookBounds.adjustLines,
+    book.expectedStartLine,
+    book.expectedEndLine,
+  );
+
+  // Строки, в которых слово встретилось. Позиции лежат в фактах книги
+  // в символах — переводим один раз здесь, чтобы клиент фильтровал
+  // ползунком мгновенно, не спрашивая сервер на каждое деление.
+  const toLine = lineIndexer(text);
+  const occurrences = new Map(book.entries.map((e) => [e.lemma, e.occurrences]));
+
   const newOnes = diff.added
     .map((l) => entries.get(l)!)
     .filter((d) => (d.books[hash] ?? 0) > 0)
@@ -107,12 +127,26 @@ books.get('/:hash/diff', (c) => {
     recordZipf: profile.recordZipf,
     /** прошлый отказ по этой книге — галочки снимутся сами */
     excluded: [...excluded],
+    /**
+     * Границы основного текста: предположение модели плюс окна, в которых
+     * его можно подвинуть. Ничего не обрезано — текст сохранён целиком.
+     */
+    bounds: {
+      start: book.expectedStartLine,
+      end: book.expectedEndLine,
+      lastLine: win.lastLine,
+      headPreviews: win.head,
+      tailFrom: win.tailFrom,
+      tailPreviews: win.tail,
+    },
     words: newOnes.map((d) => ({
       lemma: d.lemma,
       pos: d.pos,
       posLabel: posShort(d.pos),
       zipf: d.zipf,
-      count: d.books[hash] ?? 0,
+      // Номер строки на каждое вхождение, а не список уникальных строк:
+      // в абзаце слово может стоять дважды, и для счётчика это два раза.
+      lines: (occurrences.get(d.lemma) ?? []).map(toLine),
       // Единственный источник — значит отказ убирает лемму из словаря
       // целиком. Есть другая книга — строка останется, и вычитать её
       // из «станет в словаре» нельзя.

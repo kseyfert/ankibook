@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '../components/Button';
 import { RangeSlider } from '../components/RangeSlider';
 import { ZipfScale } from '../components/ZipfScale';
+import { LineBounds } from '../components/LineBounds';
 import { api, type Diff, type DiffWord } from '../api';
 import './Step3Diff.css';
 
@@ -67,6 +68,9 @@ export function Step3Diff({
 }) {
   const [diff, setDiff] = useState<Diff | null>(null);
   const [range, setRange] = useState<[number, number]>([START_LO, 4]);
+  /** Границы основного текста. Слова, встретившиеся только за ними,
+   *  из списка выпадают: лексика лицензии — не лексика книги. */
+  const [bounds, setBounds] = useState<[number, number]>([0, 0]);
   /** Снятые галочки. Держим исключения, а не включения: по умолчанию
    *  берём всё, поэтому множество остаётся малым. */
   const [off, setOff] = useState<Set<string>>(new Set());
@@ -80,6 +84,7 @@ export function Step3Diff({
       .then((d) => {
         setDiff(d);
         setRange([START_LO, d.knownZipf]);
+        setBounds([d.bounds.start, d.bounds.end]);
         // Прошлый отказ по этой книге. Шаг обратим: слова видны снова,
         // но со снятой галочкой — решение помнится, а не навязывается.
         setOff(new Set(d.excluded));
@@ -101,9 +106,29 @@ export function Step3Diff({
     [range],
   );
 
+  /**
+   * Сколько раз слово встретилось ВНУТРИ выбранных границ.
+   *
+   * Не общее число вхождений: слово из лицензии Gutenberg встречается
+   * двадцать раз, но к книге отношения не имеет. Ноль здесь означает, что
+   * слово целиком лежит в служебном блоке, и в словарь ему не надо.
+   */
+  const counts = useMemo(() => {
+    const [from, to] = bounds;
+    const m = new Map<string, number>();
+    for (const w of diff?.words ?? []) {
+      let n = 0;
+      for (const l of w.lines) if (l >= from && l <= to) n++;
+      m.set(w.lemma, n);
+    }
+    return m;
+  }, [diff, bounds]);
+
+  const countOf = useCallback((w: DiffWord) => counts.get(w.lemma) ?? 0, [counts]);
+
   const visible = useMemo(
-    () => (diff ? diff.words.filter(inRange) : []),
-    [diff, inRange],
+    () => (diff ? diff.words.filter((w) => countOf(w) > 0 && inRange(w)) : []),
+    [diff, inRange, countOf],
   );
 
   /**
@@ -124,11 +149,12 @@ export function Step3Diff({
       if (key === 'lemma') d = a.lemma.localeCompare(b.lemma);
       else if (key === 'pos') d = a.posLabel.localeCompare(b.posLabel);
       else if (key === 'checked') d = Number(!off.has(a.lemma)) - Number(!off.has(b.lemma));
+      else if (key === 'count') d = countOf(a) - countOf(b);
       else d = a[key] - b[key];
       // Равные значения — по алфавиту: иначе порядок скачет между рендерами.
       return d !== 0 ? d * dir : a.lemma.localeCompare(b.lemma);
     });
-  }, [visible, sort, off]);
+  }, [visible, sort, off, countOf]);
 
   if (error) return <p className="error">{error}</p>;
   if (!diff) return <p className="muted">Считаю изменения…</p>;
@@ -194,6 +220,12 @@ export function Step3Diff({
         <div><dt>Станет в словаре</dt><dd className="mono">{n(diff.totalLemmas - willShrink)}</dd></div>
       </dl>
 
+      <LineBounds
+        data={diff.bounds}
+        value={bounds}
+        onChange={(v) => { setBounds(v); setShown(PAGE); }}
+      />
+
       <div className="diff__bar">
         <div className="diff__actions">
           <Button variant="quiet" onClick={() => setMany(page, !allShownOn)}>
@@ -253,7 +285,7 @@ export function Step3Diff({
                 </td>
                 <td className="wordtable__lemma">{w.lemma}</td>
                 <td className="muted wordtable__pos">{w.posLabel}</td>
-                <td className="mono wordtable__num">{w.count}</td>
+                <td className="mono wordtable__num">{countOf(w)}</td>
                 <td className="wordtable__scale"><ZipfScale zipf={w.zipf} known={diff.knownZipf} /></td>
               </tr>
             );
@@ -271,6 +303,7 @@ export function Step3Diff({
       )}
 
       <p className="muted diff__hint">
+        «В книге» — сколько раз слово встретилось внутри выбранных границ.
         Точка на шкале — насколько слово частотно в языке, штрих — твой порог
         знания ({diff.knownZipf}). Имена собственные и междометия отсеяны
         автоматически. Отказ относится к этой книге: встретится в другой

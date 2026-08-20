@@ -1,0 +1,51 @@
+.lb { display: flex; flex-direction: column; gap: var(--s-2); }
+
+.lb__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s-3); }
+.lb__title {
+    font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--ink-soft);
+}
+.lb__total { font-size: var(--t-xs); }
+
+/* Сетка, а не флекс: номера строк и превью у обеих строк обязаны
+   стоять на одной вертикали, иначе их не сравнить глазом. */
+.lb__row {
+    display: grid;
+    grid-template-columns: 56px 180px 52px 1fr;
+    align-items: center;
+    gap: var(--s-3);
+}
+
+.lb__label { font-size: var(--t-sm); color: var(--ink-soft); }
+.lb__num { font-size: var(--t-sm); text-align: right; }
+
+.lb__preview {
+    font-size: var(--t-sm); color: var(--ink-soft);
+    /* Превью в одну строку: перенос дёргал бы всю сетку при перетаскивании. */
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.lb__preview--empty { opacity: 0.5; font-style: italic; }
+
+.lb__input {
+    width: 100%; height: 20px; margin: 0;
+    appearance: none; background: none; cursor: pointer;
+}
+.lb__input:disabled { opacity: 0.4; cursor: not-allowed; }
+/* Рамку вокруг всего инпута гасим: фокус помечается свечением у ручки,
+   как у ползунка популярности. Иначе два соседних ползунка выглядят
+   по-разному без всякой причины. */
+.lb__input:focus { outline: none; }
+.lb__input::-webkit-slider-runnable-track { height: 2px; background: var(--rule); border-radius: 1px; }
+.lb__input::-moz-range-track { height: 2px; background: var(--rule); border-radius: 1px; }
+.lb__input::-webkit-slider-thumb {
+    appearance: none; margin-top: -6px;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--paper); border: 2px solid var(--speak); cursor: grab;
+}
+.lb__input::-moz-range-thumb {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--paper); border: 2px solid var(--speak);
+    cursor: grab; box-sizing: border-box;
+}
+.lb__input:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px var(--speak-bg); }
+.lb__input:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px var(--speak-bg); }

@@ -53,6 +53,11 @@ export function loadBook(hash: string): BookFacts {
   return withBounds(JSON.parse(readFileSync(bookFactsPath(hash), 'utf8')) as BookFacts);
 }
 
+/** Нормализованный текст книги целиком. */
+export function loadBookText(hash: string): string {
+  return readFileSync(bookTextPath(hash), 'utf8');
+}
+
 /** Примеры предложений. Файла может не быть — книга разбиралась старой версией. */
 export function loadContexts(hash: string): BookContexts {
   const p = bookContextsPath(hash);

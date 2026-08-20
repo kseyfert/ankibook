@@ -18,8 +18,8 @@ export interface Card {
   problems: string[];
 }
 
-/** Сколько раз пробуем перегенерировать карточку, не прошедшую проверки. */
-const MAX_ATTEMPTS = 2;
+/** Сколько попыток даём на карточку, не прошедшую проверки. */
+const MAX_ATTEMPTS = Number(process.env.MAX_ATTEMPTS ?? 3);
 
 const SPEAK_SYSTEM = `Ты помогаешь русскоязычному студенту уровня B2 учить английский.
 
@@ -91,6 +91,22 @@ const READ_SYSTEM = `Ты помогаешь русскоязычному сту
 Ответь ТОЛЬКО массивом JSON, без пояснений и без markdown:
 [{"sense": null или "краткое описание", "front": "слово", "back": "перевод", "answer": "слово"}]`;
 
+const FIX_SYSTEM = `Ты переделываешь ОДНУ карточку-cloze, не прошедшую проверку.
+
+Тебе дают прежнюю версию и конкретную причину отказа. Сделай новую версию
+ТОГО ЖЕ слова в ТОМ ЖЕ значении, устранив названную проблему.
+
+Если проблема в неоднозначности — контекст допускает другое слово, — добавь
+в предложение уточняющую часть, которая делает альтернативу невозможной.
+Например, "She was too t___ to ask for a raise" допускает и timid, и tired;
+"She's not lazy, just too t___ to ask for a raise" — только timid.
+
+Если проблема в подсказке — перепиши подсказку так, чтобы она описывала смысл,
+не содержа ответ, его корень и не будучи русским заимствованием от него.
+
+Ответь ТОЛЬКО одним объектом JSON, без пояснений и без markdown:
+{"sense": ..., "front": "...", "back": "...", "answer": "..."}`;
+
 interface RawCard {
   sense: string | null;
   front: string;
@@ -126,20 +142,9 @@ export async function generateCards(
   bookHash: string,
 ): Promise<Card[]> {
   const system = deck === 'speak' ? SPEAK_SYSTEM : READ_SYSTEM;
-  let raws: RawCard[] = [];
-
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    const hint =
-      attempt === 1
-        ? ''
-        : '\n\nПРЕДЫДУЩАЯ ПОПЫТКА НЕ ПРОШЛА ПРОВЕРКУ. Причины:\n' +
-        raws.flatMap((r) => checkLeak(r.front, r.answer).problems).join('\n') +
-        '\nПеределай.';
-    raws = extractJson<RawCard[]>(
-      await llm.complete(system, userPrompt(lemma, pos, contexts) + hint),
-    );
-    if (raws.every((r) => checkLeak(r.front, r.answer).ok)) break;
-  }
+  const raws = extractJson<RawCard[]>(
+    await llm.complete(system, userPrompt(lemma, pos, contexts)),
+  );
 
   // Жёсткий инвариант поверх промпта: несколько карточек допустимы только
   // если у них РАЗНЫЕ значения. Модель регулярно возвращает по 2-3 варианта
@@ -155,23 +160,50 @@ export async function generateCards(
 
   const cards: Card[] = [];
   for (const r of unique) {
-    const problems = [...checkLeak(r.front, r.answer).problems];
+    let card = r;
+    let problems: string[] = [];
 
-    // Проверка на неоднозначность нужна только cloze: в read-карточке
-    // на лицевой стороне само слово, заполнять нечего.
-    if (deck === 'speak' && problems.length === 0) {
-      const filled = await fillBlank(llm, r.front);
-      problems.push(...checkAmbiguity(r.answer, filled).problems);
+    // Попытки по КАЖДОЙ карточке отдельно, с обеими проверками внутри цикла.
+    // Раньше перегенерация смотрела только на утечку, а неоднозначность
+    // проверялась после цикла — карточка вроде chop/clapped не переделывалась
+    // никогда. Карточку из Noji не исправить, поэтому чинить надо здесь.
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      problems = [...checkLeak(card.front, card.answer).problems];
+
+      // Неоднозначность имеет смысл только для cloze: в read-карточке
+      // на лицевой стороне само слово, заполнять нечего.
+      if (deck === 'speak' && problems.length === 0) {
+        const filled = await fillBlank(llm, card.front);
+        problems.push(...checkAmbiguity(card.answer, filled).problems);
+      }
+
+      if (problems.length === 0 || attempt === MAX_ATTEMPTS) break;
+
+      card = extractJson<RawCard>(
+        await llm.complete(
+          FIX_SYSTEM,
+          `Слово: ${lemma} (${pos})
+Значение: ${card.sense ?? 'единственное'}
+
+Прежняя версия:
+front: ${card.front}
+back: ${card.back}
+answer: ${card.answer}
+
+Причина отказа:
+${problems.join('\n')}`,
+        ),
+      );
     }
 
     cards.push({
       id: `${lemma}-${deck}-${cards.length}`,
       lemma,
       deck,
-      sense: r.sense,
-      front: r.front,
-      back: r.back,
-      answer: r.answer,
+      sense: card.sense,
+      front: card.front,
+      back: card.back,
+      answer: card.answer,
       bookHash,
       createdAt: new Date().toISOString(),
       problems,

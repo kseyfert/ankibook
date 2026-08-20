@@ -9,7 +9,7 @@ import './RangeSlider.css';
  * верхняя перехватывает клики и нижнюю становится не подцепить.
  */
 export function RangeSlider({
-                              min, max, step = 0.1, value, onChange, label, format,
+                              min, max, step = 0.1, value, onChange, label, format, mark,
                             }: {
   min: number;
   max: number;
@@ -18,6 +18,9 @@ export function RangeSlider({
   onChange: (v: [number, number]) => void;
   label: string;
   format?: (v: number) => string;
+  /** Опорная точка на шкале: значение само по себе ничего не говорит,
+   *  риска показывает, относительно чего его читать. */
+  mark?: { value: number; title: string };
 }) {
   const [lo, hi] = value;
   const pct = (v: number) => ((v - min) / (max - min)) * 100;
@@ -31,6 +34,13 @@ export function RangeSlider({
       </div>
       <div className="range__body">
         <div className="range__track" />
+        {mark && mark.value > min && mark.value < max && (
+          <span
+            className="range__mark"
+            style={{ left: `${pct(mark.value)}%` }}
+            title={`${mark.title}: ${show(mark.value)}`}
+          />
+        )}
         <div
           className="range__fill"
           style={{ left: `${pct(lo)}%`, right: `${100 - pct(hi)}%` }}

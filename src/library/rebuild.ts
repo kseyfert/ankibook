@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { listBooks, loadDictionary, saveDictionary, dictPath, USER_DIR } from './files.js';
+import { listBooks, loadDictionary, saveDictionary, loadAllExcluded, dictPath, USER_DIR } from './files.js';
 import { SKIP_POS } from './pos.js';
 import type { DictEntry, Profile } from './types.js';
 import { zipf } from './freq.js';
@@ -15,6 +15,10 @@ export interface RebuildDiff {
   bookCountUp: Array<{ lemma: string; from: number; to: number }>;
   /** статус выставлен, но источников больше нет — книга удалена */
   orphaned: string[];
+  /** строки без решений и без источников — выброшены из словаря */
+  dropped: string[];
+  /** слова, которых пользователь не захотел; в словарь не попадают */
+  excluded: number;
   /** ниже knownZipf, статус new — потенциальные кандидаты */
   candidates: number;
 }
@@ -26,16 +30,28 @@ export interface RebuildDiff {
  * твои решения (speak/read). Всё остальное производное, поэтому отмена
  * добавления книги сводится к удалению её файла и повторной сборке.
  *
- * Строки НИКОГДА не удаляются: слово могло уехать в Noji, откуда карточку
- * не забрать. Потеряв статус, мы предложили бы его заново.
+ * Строка с РЕШЕНИЕМ не удаляется никогда: слово могло уехать в Noji, откуда
+ * карточку не забрать. Потеряв статус, мы предложили бы его заново. Строки
+ * без решений и без источников — просто мусор, они выбрасываются.
  */
-export function rebuild(profile: Profile): { entries: Map<string, DictEntry>; diff: RebuildDiff } {
+export function rebuild(
+  profile: Profile,
+  excluded = loadAllExcluded(),
+): { entries: Map<string, DictEntry>; diff: RebuildDiff } {
   const books = listBooks();
   const prev = loadDictionary();
   const next = new Map<string, DictEntry>();
+  let skipped = 0;
 
   for (const book of books) {
+    const notWanted = excluded.get(book.hash);
     for (const e of book.entries) {
+      // Отказ пользователя на шаге отбора. Слово из этой книги в словарь
+      // не попадает вовсе — ни строкой, ни статусом. Если та же лемма
+      // придёт из другой книги и там будет нужна, она войдёт как новая:
+      // отказ относится к книге, а не к слову вообще.
+      if (notWanted?.has(e.lemma)) { skipped++; continue; }
+
       const z = zipf(e.lemma);
       // Служебный каркас языка — the, and, of. Не понадобится никогда.
       if (z > profile.recordZipf) continue;
@@ -67,11 +83,17 @@ export function rebuild(profile: Profile): { entries: Map<string, DictEntry>; di
     }
   }
 
-  // Слова из старого словаря, которых нет ни в одной книге: книгу удалили.
-  // Счётчики честно нулевые — свидетельств не осталось, — но статус живёт.
+  // Слова из старого словаря, которых нет ни в одной книге: книгу удалили
+  // или пользователь отказался от слова на отборе.
   const orphaned: string[] = [];
+  const dropped: string[] = [];
   for (const [lemma, old] of prev) {
     if (next.has(lemma)) continue;
+    // Нетронутая строка без источников не несёт ничего: ни карточки, ни
+    // решения. Держать её — значит копить в словаре мусор, который мешает
+    // читать его глазами.
+    if (old.speak === 'new' && old.read === 'new') { dropped.push(lemma); continue; }
+    // Решение живёт даже без свидетельств: счётчики честно нулевые.
     orphaned.push(lemma);
     next.set(lemma, { ...old, totalCount: 0, bookCount: 0, books: {} });
   }
@@ -92,7 +114,10 @@ export function rebuild(profile: Profile): { entries: Map<string, DictEntry>; di
 
   return {
     entries: next,
-    diff: { books: books.length, total: next.size, added, bookCountUp, orphaned, candidates },
+    diff: {
+      books: books.length, total: next.size, added, bookCountUp,
+      orphaned, dropped, excluded: skipped, candidates,
+    },
   };
 }
 

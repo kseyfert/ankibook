@@ -16,9 +16,18 @@ if (diff.added.length) console.log('  ' + diff.added.slice(0, 12).join(', ') + (
 console.log(`выросло bookCount: ${diff.bookCountUp.length}`);
 for (const b of diff.bookCountUp.slice(0, 10)) console.log(`  ${b.lemma}: ${b.from} → ${b.to} книг`);
 
+if (diff.excluded) {
+  console.log(`не взято:          ${diff.excluded} слов (отказ на отборе)`);
+}
+
 if (diff.orphaned.length) {
   console.log(`осиротело:         ${diff.orphaned.length} (книга удалена, статус сохранён)`);
   console.log('  ' + diff.orphaned.slice(0, 10).join(', '));
+}
+
+if (diff.dropped.length) {
+  console.log(`выброшено:         ${diff.dropped.length} (без решений и без источников)`);
+  console.log('  ' + diff.dropped.slice(0, 10).join(', ') + (diff.dropped.length > 10 ? ' …' : ''));
 }
 
 console.log(`\nкандидатов к отбору: ${diff.candidates}`);

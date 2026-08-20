@@ -13,6 +13,7 @@ const PROFILE = join(USER_DIR, 'profile.json');
 export const bookFactsPath = (hash: string) => join(BOOKS_DIR, `${hash}.json`);
 export const bookTextPath = (hash: string) => join(BOOKS_DIR, `${hash}.txt`);
 export const bookContextsPath = (hash: string) => join(BOOKS_DIR, `${hash}.contexts.json`);
+export const bookExcludedPath = (hash: string) => join(BOOKS_DIR, `${hash}.excluded.json`);
 
 export function ensureDirs(): void {
   for (const d of [USER_DIR, BOOKS_DIR, EXPORTS_DIR]) {
@@ -41,12 +42,54 @@ export function loadContexts(hash: string): BookContexts {
   return existsSync(p) ? (JSON.parse(readFileSync(p, 'utf8')) as BookContexts) : {};
 }
 
+/** Сайдкары рядом с фактами книги. Всё, что не они, — сами факты. */
+const SIDECARS = ['.contexts.json', '.excluded.json'];
+
 export function listBooks(): BookFacts[] {
   if (!existsSync(BOOKS_DIR)) return [];
   return readdirSync(BOOKS_DIR)
-    .filter((f) => f.endsWith('.json') && !f.endsWith('.contexts.json'))
+    .filter((f) => f.endsWith('.json') && !SIDECARS.some((s) => f.endsWith(s)))
     .map((f) => JSON.parse(readFileSync(join(BOOKS_DIR, f), 'utf8')) as BookFacts)
     .sort((a, b) => a.addedAt.localeCompare(b.addedAt));
+}
+
+// ─── исключённые слова ─────────────────────────────────────────────────
+
+/**
+ * Слова книги, которые пользователь решил в словарь не брать.
+ *
+ * Хранится СПИСОК ОТКАЗОВ, а не список включённых, потому что умолчание —
+ * «берём всё»: нет файла — книга идёт в словарь целиком, и `npm run rebuild`
+ * работает ровно как раньше. Список включённых потребовал бы записи по всем
+ * трём тысячам лемм ради отказа от восьмисот.
+ *
+ * Отдельным файлом, а не полем в `<hash>.json`: тот файл описывает ТЕКСТ —
+ * леммы, счётчики, позиции. Всё это выводится из книги и не зависит от
+ * человека. Решение человека — не факт о книге, и смешивать их значит
+ * потерять возможность переразобрать книгу, не затерев выбор.
+ */
+export function loadExcluded(hash: string): Set<string> {
+  const p = bookExcludedPath(hash);
+  if (!existsSync(p)) return new Set();
+  return new Set(JSON.parse(readFileSync(p, 'utf8')) as string[]);
+}
+
+export function saveExcluded(hash: string, lemmas: Iterable<string>): void {
+  ensureDirs();
+  const sorted = [...lemmas].sort((a, b) => a.localeCompare(b));
+  writeFileSync(bookExcludedPath(hash), JSON.stringify(sorted, null, 2));
+}
+
+/** hash книги → её исключённые леммы. Для пересборки словаря целиком. */
+export function loadAllExcluded(): Map<string, Set<string>> {
+  const m = new Map<string, Set<string>>();
+  if (!existsSync(BOOKS_DIR)) return m;
+  for (const f of readdirSync(BOOKS_DIR)) {
+    if (!f.endsWith('.excluded.json')) continue;
+    const hash = f.slice(0, -'.excluded.json'.length);
+    m.set(hash, loadExcluded(hash));
+  }
+  return m;
 }
 
 // ─── словарь ───────────────────────────────────────────────────────────

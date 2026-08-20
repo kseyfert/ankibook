@@ -23,16 +23,22 @@
    Отступ задан отдельным правилом на th и td: селектор `.wordtable td`
    специфичнее, чем `.wordtable__num`, и его сокращённый padding обнулял
    padding-right у ячейки. Заголовок отступ получал, число — нет, и графа
-   разъезжалась ровно на эти 24 пикселя. */
-.wordtable__check { width: 32px; }
-.wordtable__pos   { width: 150px; }
-.wordtable__num   { width: 96px; text-align: right; }
-/* Шире самой шкалы (84px): в заголовке помещается «Популярность» со стрелкой. */
-.wordtable__scale { width: 132px; }
+   разъезжалась ровно на эти 24 пикселя.
+
+   Остаток ширины забирает шкала, а не колонка со словом: при table-layout
+   fixed свободное место достаётся колонке без заданной ширины, и раньше
+   это был «Слово» — между словом и частью речи зияла дыра в три сотни
+   пикселей. Шкале лишнее место, наоборот, на пользу: те же деления
+   растягиваются, и точку с риской видно без прищура. */
+.wordtable__check { width: 44px; }
+.wordtable__lemma { width: 220px; }
+.wordtable__pos   { width: 164px; }
+.wordtable__num   { width: 108px; text-align: right; }
 .wordtable th.wordtable__num,
 .wordtable td.wordtable__num { padding-right: var(--s-5); }
+.wordtable__scale .zscale { width: 100%; }
 
-.wordtable__lemma { font-weight: 550; }
+.wordtable td.wordtable__lemma { font-weight: 550; }
 .wordtable__check input { accent-color: var(--speak); cursor: pointer; }
 
 .wordtable__row--off td { opacity: 0.35; }
@@ -45,8 +51,13 @@
     font: inherit; color: inherit; letter-spacing: inherit; text-transform: inherit;
     background: none; border: 0; padding: 0; cursor: pointer;
     display: inline-flex; align-items: baseline; gap: var(--s-1);
+    /* Стрелка не должна ронять заголовок на вторую строку. */
+    white-space: nowrap;
 }
 .sorthead:hover { color: var(--ink); }
 .sorthead--on { color: var(--ink); font-weight: 600; }
 /* Стрелка занимает место всегда, иначе заголовок дёргается при смене колонки. */
 .sorthead__arrow { display: inline-block; width: 0.7em; text-align: center; opacity: 0.8; }
+/* Колонка с галочками узкая, заголовка у неё нет — сортировка живёт
+   в самом знаке отметки. */
+.wordtable__check .sorthead { gap: 0; }

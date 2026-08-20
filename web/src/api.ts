@@ -43,6 +43,8 @@ export interface DiffWord {
   posLabel: string;
   zipf: number;
   count: number;
+  /** книга — единственный источник слова: отказ убирает его из словаря целиком */
+  onlyHere: boolean;
 }
 
 export interface Diff {
@@ -50,8 +52,11 @@ export interface Diff {
   totalLemmas: number;
   added: number;
   bookCountUp: number;
-  candidates: number;
   knownZipf: number;
+  /** верх шкалы: выше этого слова в словарь не пишутся вообще */
+  recordZipf: number;
+  /** от чего уже отказывались по этой книге */
+  excluded: string[];
   words: DiffWord[];
 }
 
@@ -128,9 +133,9 @@ export const api = {
   getDiff: (hash: string) => req<Diff>(`/books/${hash}/diff`),
   getCandidates: (hash: string, speak: number, read: number) =>
     req<Candidates>(`/books/${hash}/candidates?speak=${speak}&read=${read}`),
-  applyDictionary: (rejected: string[]) =>
-    req<{ total: number; added: number; candidates: number; rejected: number }>(
+  applyDictionary: (hash: string, excluded: string[]) =>
+    req<{ total: number; added: number; candidates: number; excluded: number; dropped: number }>(
       '/dictionary/apply',
-      json({ rejected }),
+      json({ hash, excluded }),
     ),
 };

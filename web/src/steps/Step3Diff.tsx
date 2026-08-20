@@ -7,21 +7,41 @@ import './Step3Diff.css';
 
 /** Сколько строк рисуем за раз. Данные все на клиенте — это только рендер. */
 const PAGE = 100;
-const FLOOR = 1;
-const CEIL = 7.7;
+/**
+ * Низ шкалы. Ноль — не «частота ноль», а «слова нет в частотной таблице»:
+ * имя собственное, опечатка или совсем экзотика. Отдельного деления такие
+ * слова не заслуживают, но и молча пропадать не должны, поэтому стоят
+ * на самом краю — и попадают в выборку, только когда край захвачен.
+ */
+const FLOOR = 0;
+/** Низ по умолчанию: ниже единицы осмысленных слов не остаётся. */
+const START_LO = 1;
 const n = (v: number) => v.toLocaleString('ru-RU');
 
 /** Колонки, по которым сортируем. По умолчанию — вхождения в книге:
  *  это единственная ось, где «больше» однозначно значит «важнее». */
-type SortKey = 'count' | 'zipf';
+type SortKey = 'checked' | 'lemma' | 'pos' | 'count' | 'zipf';
 type Sort = { key: SortKey; dir: 1 | -1 };
 const DEFAULT_SORT: Sort = { key: 'count', dir: -1 };
 
-function SortHead({ label, sort, mine, onPick }: {
+/**
+ * Куда колонка сортируется при первом клике.
+ *
+ * Единого «по убыванию» тут нет: у чисел интересен максимум, у слов —
+ * начало алфавита. Одинаковое правило для всех давало бы «Слово ↓» с Z
+ * наверху, то есть ровно то, чего никто не ждёт.
+ */
+const FIRST_DIR: Record<SortKey, 1 | -1> = {
+  checked: -1, lemma: 1, pos: 1, count: -1, zipf: -1,
+};
+
+function SortHead({ label, sort, mine, onPick, glyph }: {
   label: string;
   sort: Sort;
   mine: SortKey;
   onPick: (key: SortKey) => void;
+  /** чем подписать колонку без заголовка — например, графу с галочками */
+  glyph?: string;
 }) {
   const on = sort.key === mine;
   return (
@@ -30,8 +50,9 @@ function SortHead({ label, sort, mine, onPick }: {
       className={`sorthead${on ? ' sorthead--on' : ''}`}
       onClick={() => onPick(mine)}
       title={on ? 'Сменить направление' : `Сортировать по «${label}»`}
+      aria-label={glyph ? `Сортировать по «${label}»` : undefined}
     >
-      {label}
+      {glyph ?? label}
       <span className="sorthead__arrow" aria-hidden="true">{on ? (sort.dir === -1 ? '↓' : '↑') : ''}</span>
     </button>
   );
@@ -45,7 +66,7 @@ export function Step3Diff({
   onBack: () => void;
 }) {
   const [diff, setDiff] = useState<Diff | null>(null);
-  const [range, setRange] = useState<[number, number]>([FLOOR, 4]);
+  const [range, setRange] = useState<[number, number]>([START_LO, 4]);
   /** Снятые галочки. Держим исключения, а не включения: по умолчанию
    *  берём всё, поэтому множество остаётся малым. */
   const [off, setOff] = useState<Set<string>>(new Set());
@@ -56,7 +77,13 @@ export function Step3Diff({
 
   useEffect(() => {
     api.getDiff(bookHash)
-      .then((d) => { setDiff(d); setRange([FLOOR, d.knownZipf]); })
+      .then((d) => {
+        setDiff(d);
+        setRange([START_LO, d.knownZipf]);
+        // Прошлый отказ по этой книге. Шаг обратим: слова видны снова,
+        // но со снятой галочкой — решение помнится, а не навязывается.
+        setOff(new Set(d.excluded));
+      })
       .catch((e) => setError((e as Error).message));
   }, [bookHash]);
 
@@ -79,6 +106,10 @@ export function Step3Diff({
     [diff, inRange],
   );
 
+  /**
+   * Сортировка идёт по ВСЕМ словам в диапазоне, а не по нарисованным ста:
+   * «показать ещё» — это только рендер, порядок к нему отношения не имеет.
+   */
   const sorted = useMemo(() => {
     const { key, dir } = sort;
     return [...visible].sort((a, b) => {
@@ -89,11 +120,15 @@ export function Step3Diff({
         if (a.zipf === b.zipf) return a.lemma.localeCompare(b.lemma);
         return a.zipf === 0 ? 1 : -1;
       }
-      const d = a[key] - b[key];
+      let d: number;
+      if (key === 'lemma') d = a.lemma.localeCompare(b.lemma);
+      else if (key === 'pos') d = a.posLabel.localeCompare(b.posLabel);
+      else if (key === 'checked') d = Number(!off.has(a.lemma)) - Number(!off.has(b.lemma));
+      else d = a[key] - b[key];
       // Равные значения — по алфавиту: иначе порядок скачет между рендерами.
       return d !== 0 ? d * dir : a.lemma.localeCompare(b.lemma);
     });
-  }, [visible, sort]);
+  }, [visible, sort, off]);
 
   if (error) return <p className="error">{error}</p>;
   if (!diff) return <p className="muted">Считаю изменения…</p>;
@@ -102,18 +137,25 @@ export function Step3Diff({
   // остальное: и снятое галочкой, и отсечённое ползунком.
   const selected = visible.filter((w) => !off.has(w.lemma));
   const keep = new Set(selected.map((w) => w.lemma));
-  const rejectedLemmas = diff.words.filter((w) => !keep.has(w.lemma)).map((w) => w.lemma);
+  const dropping = diff.words.filter((w) => !keep.has(w.lemma));
+  // Вычитаем только те, для которых эта книга — единственный источник:
+  // остальные останутся в словаре по своей второй книге.
+  const willShrink = dropping.filter((w) => w.onlyHere).length;
   const page = sorted.slice(0, shown);
   const allShownOn = page.length > 0 && page.every((w) => !off.has(w.lemma));
   // «Все» — это все в диапазоне: за его пределами галочка ничего не значит.
   const allOn = visible.every((w) => !off.has(w.lemma));
 
-  /** Та же колонка — разворот, другая — по убыванию: сверху всегда
-   *  «самое-самое», для обеих осей это интереснее начала списка. */
+  /** Та же колонка — разворот, другая — в своём естественном направлении. */
   const pickSort = (key: SortKey) => {
-    setSort((s) => (s.key === key ? { key, dir: (s.dir === -1 ? 1 : -1) as 1 | -1 } : { key, dir: -1 }));
+    setSort((s) => (s.key === key
+      ? { key, dir: (s.dir === -1 ? 1 : -1) as 1 | -1 }
+      : { key, dir: FIRST_DIR[key] }));
     setShown(PAGE);
   };
+
+  const ariaSort = (key: SortKey) =>
+    sort.key === key ? (sort.dir === -1 ? 'descending' : 'ascending') : 'none';
 
   const toggle = (lemma: string) =>
     setOff((s) => {
@@ -132,7 +174,7 @@ export function Step3Diff({
   async function apply() {
     setBusy(true);
     try {
-      await api.applyDictionary(rejectedLemmas);
+      await api.applyDictionary(bookHash, dropping.map((w) => w.lemma));
       onApplied();
     } catch (e) {
       setError((e as Error).message);
@@ -148,11 +190,8 @@ export function Step3Diff({
       <dl className="facts">
         <div><dt>Новых слов</dt><dd className="mono">{n(diff.words.length)}</dd></div>
         <div><dt>Отобрано</dt><dd className="mono">{n(selected.length)}</dd></div>
-        <div><dt>Отклонено</dt><dd className="mono">{n(rejectedLemmas.length)}</dd></div>
-        {/* Отклонённые остаются строками словаря — счётчики по ним копятся
-            дальше, меняется только статус. Поэтому размер словаря от
-            отклонений не зависит. */}
-        <div><dt>Станет в словаре</dt><dd className="mono">{n(diff.totalLemmas)}</dd></div>
+        <div><dt>Не берём</dt><dd className="mono">{n(dropping.length)}</dd></div>
+        <div><dt>Станет в словаре</dt><dd className="mono">{n(diff.totalLemmas - willShrink)}</dd></div>
       </dl>
 
       <div className="diff__bar">
@@ -167,10 +206,11 @@ export function Step3Diff({
         <RangeSlider
           label="Популярность"
           min={FLOOR}
-          max={CEIL}
+          max={diff.recordZipf}
           value={range}
           onChange={(v) => { setRange(v); setShown(PAGE); }}
           format={(v) => v.toFixed(1)}
+          mark={{ value: diff.knownZipf, title: 'порог знания' }}
         />
       </div>
 
@@ -180,24 +220,24 @@ export function Step3Diff({
       </p>
 
       {page.length === 0 ? (
-        <p className="muted">В этом диапазоне слов нет. Раздвинь ползунки.</p>
+        <p className="muted">В этом диапазоне слов нет.</p>
       ) : (
         <table className="wordtable">
           <thead>
           <tr>
-            <th className="wordtable__check" />
-            <th>Слово</th>
-            <th className="wordtable__pos">Часть речи</th>
-            <th
-              className="wordtable__num"
-              aria-sort={sort.key === 'count' ? (sort.dir === -1 ? 'descending' : 'ascending') : 'none'}
-            >
+            <th className="wordtable__check" aria-sort={ariaSort('checked')}>
+              <SortHead label="Отметке" mine="checked" sort={sort} onPick={pickSort} glyph="✓" />
+            </th>
+            <th className="wordtable__lemma" aria-sort={ariaSort('lemma')}>
+              <SortHead label="Слово" mine="lemma" sort={sort} onPick={pickSort} />
+            </th>
+            <th className="wordtable__pos" aria-sort={ariaSort('pos')}>
+              <SortHead label="Часть речи" mine="pos" sort={sort} onPick={pickSort} />
+            </th>
+            <th className="wordtable__num" aria-sort={ariaSort('count')}>
               <SortHead label="В книге" mine="count" sort={sort} onPick={pickSort} />
             </th>
-            <th
-              className="wordtable__scale"
-              aria-sort={sort.key === 'zipf' ? (sort.dir === -1 ? 'descending' : 'ascending') : 'none'}
-            >
+            <th className="wordtable__scale" aria-sort={ariaSort('zipf')}>
               <SortHead label="Популярность" mine="zipf" sort={sort} onPick={pickSort} />
             </th>
           </tr>
@@ -233,17 +273,9 @@ export function Step3Diff({
       <p className="muted diff__hint">
         Точка на шкале — насколько слово частотно в языке, штрих — твой порог
         знания ({diff.knownZipf}). Имена собственные и междометия отсеяны
-        автоматически. Слова, которых нет в частотной таблице, видны только
-        когда левый ползунок в самом низу.
+        автоматически. Отказ относится к этой книге: встретится в другой
+        и понадобится там — войдёт как новое.
       </p>
-      {rejectedLemmas.length > 0 && (
-        <p className="muted diff__hint">
-          {n(rejectedLemmas.length)} слов вне диапазона или со снятой галочкой будут
-          отклонены: в словаре они останутся и счётчики по ним продолжат
-          копиться, но в карточки предложены не будут. Чтобы оставить запас
-          на будущее — раздвинь ползунки.
-        </p>
-      )}
 
       <div className="row">
         <Button variant="primary" onClick={apply} disabled={busy || selected.length === 0}>

@@ -3,7 +3,7 @@ import { writeFileSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { addBook } from '../../library/add-book.js';
-import { listBooks, loadContexts, loadDictionary, loadProfile } from '../../library/files.js';
+import { listBooks, loadContexts, loadDictionary, loadExcluded, loadProfile } from '../../library/files.js';
 import { rebuild } from '../../library/rebuild.js';
 import { isEligible, selectCandidates, type Candidate } from '../../library/score.js';
 import { loadSession, saveSession } from '../session.js';
@@ -75,6 +75,11 @@ books.post('/', async (c) => {
  * Отдаём ВСЕ слова разом, без пагинации: их порядка тысячи, это десятки
  * килобайт. Зато фильтр по частотности и «отметить всё» работают мгновенно
  * на клиенте, без похода на сервер за каждым изменением ползунка.
+ *
+ * Пересборка считается БЕЗ учёта прошлых отказов, а сами отказы едут рядом
+ * списком. Так шаг 3 остаётся обратимым: вернувшись, ты снова видишь то, от
+ * чего отказался, — со снятой галочкой. Считай мы по сохранённому решению,
+ * отказанное слово просто исчезло бы из списка, и передумать было бы негде.
  */
 books.get('/:hash/diff', (c) => {
   const hash = c.req.param('hash');
@@ -82,7 +87,8 @@ books.get('/:hash/diff', (c) => {
   if (!book) return c.json({ error: 'Книга не найдена' }, 404);
 
   const profile = loadProfile();
-  const { entries, diff } = rebuild(profile);
+  const { entries, diff } = rebuild(profile, new Map());
+  const excluded = loadExcluded(hash);
 
   const newOnes = diff.added
     .map((l) => entries.get(l)!)
@@ -94,14 +100,20 @@ books.get('/:hash/diff', (c) => {
     totalLemmas: diff.total,
     added: newOnes.length,
     bookCountUp: diff.bookCountUp.length,
-    candidates: diff.candidates,
     knownZipf: profile.knownZipf,
+    recordZipf: profile.recordZipf,
+    /** прошлый отказ по этой книге — галочки снимутся сами */
+    excluded: [...excluded],
     words: newOnes.map((d) => ({
       lemma: d.lemma,
       pos: d.pos,
       posLabel: posShort(d.pos),
       zipf: d.zipf,
       count: d.books[hash] ?? 0,
+      // Единственный источник — значит отказ убирает лемму из словаря
+      // целиком. Есть другая книга — строка останется, и вычитать её
+      // из «станет в словаре» нельзя.
+      onlyHere: Object.keys(d.books).length === 1,
     })),
   });
 });

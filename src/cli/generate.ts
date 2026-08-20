@@ -1,13 +1,13 @@
 import { readFileSync, existsSync, appendFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { AnthropicLlm } from './llm.js';
-import { tuning, argNum } from './config.js';
-import { generateCards, type Card } from './generate.js';
-import { loadDictionary, listBooks, bookContextsPath, USER_DIR, ensureDirs } from './store/files.js';
-import type { BookContexts } from './store/types.js';
+import { AnthropicLlm } from '../cards/llm.js';
+import { tuning, argNum } from '../config/index.js';
+import { generateCards, type Card } from '../cards/generate.js';
+import { loadDictionary, listBooks, bookContextsPath, USER_DIR, ensureDirs } from '../library/files.js';
+import type { BookContexts } from '../library/types.js';
 
 const CARDS = join(USER_DIR, 'cards.jsonl');
-const LIMIT = argNum('limit', tuning().generation.defaultLimit);
+const LIMIT = argNum('limit', tuning.generation.defaultLimit);
 
 const books = listBooks();
 if (!books.length) { console.error('Нет книг.'); process.exit(1); }

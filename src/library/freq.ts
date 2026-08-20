@@ -26,7 +26,7 @@ import { dirname, join } from 'node:path';
  */
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const TABLE_PATH = join(HERE, '..', 'data', 'freq-en.txt');
+const TABLE_PATH = join(HERE, '..', '..', 'data', 'freq-en.txt');
 
 /** Слово отсутствует в таблице: имя собственное, опечатка или очень редкое. */
 export const UNKNOWN = 0;

@@ -2,8 +2,8 @@ import { readFileSync, writeFileSync, appendFileSync, existsSync } from 'node:fs
 import { join } from 'node:path';
 import {
   loadDictionary, saveDictionary, EXPORTS_DIR, USER_DIR, ensureDirs,
-} from './store/files.js';
-import type { Card } from './generate.js';
+} from '../library/files.js';
+import type { Card } from '../cards/generate.js';
 
 const CARDS = join(USER_DIR, 'cards.jsonl');
 const LOG = join(USER_DIR, 'exports.jsonl');

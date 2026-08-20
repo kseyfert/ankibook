@@ -1,7 +1,7 @@
-import { readFileSync } from 'node:fs'
-import { extname, basename } from 'node:path'
-import { parseOffice } from 'officeparser'
-import { normalizeText, countWords } from './normalize.js'
+import { readFileSync } from 'node:fs';
+import { extname, basename } from 'node:path';
+import { parseOffice } from 'officeparser';
+import { normalizeText, countWords } from './normalize.js';
 
 export interface DocMeta {
   title: string | null;
@@ -19,7 +19,9 @@ export interface Document {
 }
 
 /** officeparser поддерживает всё это; txt в списке нет и разбирается отдельно. */
-const OFFICE_FORMATS = new Set(['.epub']);
+const OFFICE_FORMATS = new Set([
+  '.epub', '.docx', '.rtf', '.odt', '.md', '.html', '.htm', '.pdf',
+]);
 
 interface Node {
   type: string;

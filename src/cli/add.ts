@@ -1,4 +1,4 @@
-import { addBook } from './add-book.js';
+import { addBook } from '../library/add-book.js';
 
 const path = process.argv[2];
 if (!path) { console.error('usage: npm run add -- <file>'); process.exit(1); }

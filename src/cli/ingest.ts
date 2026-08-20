@@ -1,5 +1,5 @@
 import { writeFileSync } from 'node:fs';
-import { ingest } from './ingest.js';
+import { ingest } from '../text/ingest.js';
 
 const [path, out] = process.argv.slice(2);
 if (!path) {

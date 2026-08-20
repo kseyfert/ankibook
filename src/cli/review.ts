@@ -1,16 +1,16 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { createInterface } from 'node:readline';
-import { selectCandidates, type Candidate } from './score.js';
+import { selectCandidates, type Candidate } from '../library/score.js';
 import {
   loadDictionary, saveDictionary, loadProfile, listBooks, bookContextsPath,
-} from './store/files.js';
-import type { BookContexts, DeckStatus } from './store/types.js';
+} from '../library/files.js';
+import type { BookContexts, DeckStatus } from '../library/types.js';
 
-import { tuning, argNum } from './config.js';
+import { tuning, argNum } from '../config/index.js';
 
-const TOP_SPEAK = argNum('speak', tuning().review.topSpeak);
-const TOP_READ = argNum('read', tuning().review.topRead);
-const SHOW_CONTEXTS = tuning().contexts.maxShown;
+const TOP_SPEAK = argNum('speak', tuning.review.topSpeak);
+const TOP_READ = argNum('read', tuning.review.topRead);
+const SHOW_CONTEXTS = tuning.contexts.maxShown;
 
 type Action = 'speak' | 'read' | 'skip' | 'reject' | 'known' | 'back' | 'quit';
 

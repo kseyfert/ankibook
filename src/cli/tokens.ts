@@ -1,4 +1,4 @@
-import { tokenize } from './tokenize.js';
+import { tokenize } from '../text/tokenize.js';
 
 const text = process.argv.slice(2).join(' ');
 if (!text) {

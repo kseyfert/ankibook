@@ -1,5 +1,5 @@
-import type { DictEntry, Profile } from './store/types.js';
-import { tuning } from './config.js';
+import type { DictEntry, Profile } from './types.js';
+import { tuning } from '../config/index.js';
 
 /**
  * Скоринг кандидатов. Две НЕЗАВИСИМЫЕ оси, их нельзя складывать в одну:
@@ -56,7 +56,7 @@ export function isEligible(d: DictEntry, profile: Profile): boolean {
   if (d.zipf === 0 && d.totalCount < 4) return false;
   // Выше порога знания. Исключение: слово из третьей книги — раз оно
   // упорно попадается именно в твоём чтении, глобальная статистика врёт.
-  if (d.zipf >= profile.knownZipf && d.bookCount < tuning().scoring.historyOverride) return false;
+  if (d.zipf >= profile.knownZipf && d.bookCount < tuning.scoring.historyOverride) return false;
   // Единственное вхождение и никакой истории — свидетельств нет.
   if (d.totalCount === 1 && d.bookCount < 2) return false;
   return true;
@@ -72,7 +72,7 @@ export function scoreCandidate(
   const exp = expected(d.zipf, bookWords);
   const over = exp > 0 ? countInBook / exp : Infinity;
 
-  const t = tuning().scoring;
+  const t = tuning.scoring;
   const bookValue = clamp01(Math.log2(Math.max(1, countInBook)) / Math.log2(t.saturation));
 
   const span = profile.knownZipf - t.floorZipf;

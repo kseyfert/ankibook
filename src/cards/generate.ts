@@ -1,9 +1,9 @@
 import type { LlmPort } from './llm.js';
 import { extractJson } from './llm.js';
 import { checkLeak, checkAmbiguity, checkFormat, fixBlank } from './validate.js';
-import type { Deck } from './score.js';
+import type { Deck } from '../library/score.js';
 import { speakSystem, readSystem, fixSystem, fillBlankSystem, wordPrompt, fixPrompt } from './prompts.js';
-import { tuning } from './config.js';
+import { tuning } from '../config/index.js';
 
 export interface Card {
   id: string;
@@ -46,7 +46,7 @@ export async function generateCards(
   deck: Deck,
   bookHash: string,
 ): Promise<Card[]> {
-  const maxAttempts = tuning().generation.maxAttempts;
+  const maxAttempts = tuning.generation.maxAttempts;
   const system = deck === 'speak' ? speakSystem() : readSystem();
   const raws = extractJson<RawCard[]>(
     await llm.complete(system, wordPrompt({ lemma, pos, contexts })),

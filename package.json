@@ -5,15 +5,15 @@
   "description": "",
   "main": "dist/index.js",
   "scripts": {
-    "ingest": "tsx src/cli.ts",
-    "typecheck": "tsc",
-    "tok": "tsx src/tok-cli.ts",
-    "add": "tsx src/add-cli.ts",
-    "rebuild": "tsx src/rebuild-cli.ts",
-    "review": "tsx src/review-cli.ts",
-    "generate": "tsx --env-file=.env src/generate-cli.ts",
-    "export": "tsx src/export-cli.ts",
-    "clean": "tsx src/clean-cli.ts"
+    "add": "tsx src/cli/add.ts",
+    "rebuild": "tsx src/cli/rebuild.ts",
+    "review": "tsx src/cli/review.ts",
+    "generate": "tsx --env-file=.env src/cli/generate.ts",
+    "export": "tsx src/cli/export.ts",
+    "clean": "tsx src/cli/clean.ts",
+    "ingest": "tsx src/cli/ingest.ts",
+    "tokens": "tsx src/cli/tokens.ts",
+    "typecheck": "tsc"
   },
   "dependencies": {
     "officeparser": "^7.6.1",

@@ -1,8 +1,9 @@
 import { unlinkSync } from 'node:fs';
-import { rebuild, writeNext, applyNext, NEXT_PATH, hasNext } from './rebuild.js';
-import { loadProfile } from './store/files.js';
+import { rebuild, writeNext, applyNext, NEXT_PATH, hasNext } from '../library/rebuild.js';
+import { loadProfile } from '../library/files.js';
+import { argFlag } from '../config/index.js';
 
-const apply = process.argv.includes('--apply');
+const apply = argFlag('apply');
 const profile = loadProfile();
 const { entries, diff } = rebuild(profile);
 

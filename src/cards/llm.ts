@@ -11,7 +11,7 @@ export interface LlmPort {
   complete(system: string, user: string): Promise<string>;
 }
 
-import { tuning } from './config.js';
+import { tuning } from '../config/index.js';
 
 export class AnthropicLlm implements LlmPort {
   constructor(private apiKey = process.env.ANTHROPIC_API_KEY ?? '') {
@@ -27,8 +27,8 @@ export class AnthropicLlm implements LlmPort {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: tuning().generation.model,
-        max_tokens: tuning().generation.maxTokens,
+        model: tuning.generation.model,
+        max_tokens: tuning.generation.maxTokens,
         system,
         messages: [{ role: 'user', content: user }],
       }),

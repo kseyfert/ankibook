@@ -15,7 +15,7 @@ import { dirname, join } from 'node:path';
  * Функции ниже делают эту связь видимой и проверяемой компилятором.
  */
 
-const DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'prompts');
+const DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'prompts');
 
 const cache = new Map<string, string>();
 

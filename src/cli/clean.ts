@@ -1,7 +1,7 @@
 import { readdirSync, rmSync, existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
-import { USER_DIR, BOOKS_DIR, EXPORTS_DIR } from './store/files.js';
+import { USER_DIR, BOOKS_DIR, EXPORTS_DIR } from '../library/files.js';
 
 /** Что сохраняем: .gitkeep держит структуру папок в репозитории. */
 const KEEP = new Set(['.gitkeep']);

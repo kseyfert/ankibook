@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { listBooks, loadDictionary, saveDictionary, dictPath, USER_DIR } from './store/files.js';
-import type { DictEntry, Profile } from './store/types.js';
+import { listBooks, loadDictionary, saveDictionary, dictPath, USER_DIR } from './files.js';
+import type { DictEntry, Profile } from './types.js';
 import { zipf } from './freq.js';
 
 export const NEXT_PATH = join(USER_DIR, 'dictionary.next.jsonl');

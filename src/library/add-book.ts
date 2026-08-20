@@ -1,12 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { basename } from 'node:path';
-import { ingest } from './ingest.js';
-import { tokenize } from './tokenize.js';
-import { aggregate } from './aggregate.js';
-import { bookExists, saveBook } from './store/files.js';
-import type { BookFacts, BookContexts, BookEntry } from './store/types.js';
-import { tuning } from './config.js';
+import { ingest } from '../text/ingest.js';
+import { tokenize } from '../text/tokenize.js';
+import { aggregate } from '../text/aggregate.js';
+import { bookExists, saveBook } from './files.js';
+import type { BookFacts, BookContexts, BookEntry } from './types.js';
+import { tuning } from '../config/index.js';
 
 
 
@@ -56,7 +56,7 @@ function collectContexts(text: string, entries: BookEntry[]): BookContexts {
   const out: BookContexts = {};
   for (const e of entries) {
     // выборка с запасом: часть предложений отсеется по длине или как дубли
-    const { maxStored, minLength } = tuning().contexts;
+    const { maxStored, minLength } = tuning.contexts;
     const picked = evenly(e.occurrences, maxStored * 2);
     const seen = new Set<string>();
     for (const pos of picked) {

@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs';
 import { extname, basename } from 'node:path';
 import { parseOffice } from 'officeparser';
 import { normalizeText, countWords } from './normalize.js';
+import { detectBookBounds } from './boilerplate.js';
+import type { LlmPort } from '../llm/index.js';
 
 export interface DocMeta {
   title: string | null;
@@ -9,6 +11,10 @@ export interface DocMeta {
   format: string;
   wordCount: number;
   charCount: number;
+  /** первая строка основного текста; 0 — резать нечего */
+  expectedStartLine: number;
+  /** последняя строка основного текста, включительно */
+  expectedEndLine: number;
 }
 
 /** Всё сериализуемо в JSON — условие для будущей веб-версии. */
@@ -70,7 +76,14 @@ async function readOffice(path: string) {
   };
 }
 
-export async function ingest(path: string): Promise<Document> {
+/**
+ * Файл → нормализованный текст.
+ *
+ * `llm` идёт ПАРАМЕТРОМ, а не создаётся внутри: разбор текста не должен
+ * знать ни про ключи, ни про сеть. `null` — законное значение и означает
+ * «спросить не у кого»; границы тогда крайние, то есть весь текст.
+ */
+export async function ingest(path: string, llm: LlmPort | null): Promise<Document> {
   const ext = extname(path).toLowerCase();
   let blocks: string[];
   let title: string | null = null;
@@ -94,6 +107,11 @@ export async function ingest(path: string): Promise<Document> {
   const text = assemble(blocks);
   if (!text) throw new Error('Из файла не извлечено ни одного блока текста');
 
+  // Текст сохраняется ЦЕЛИКОМ. Границы — только предположение рядом с ним.
+  const bounds = llm
+    ? await detectBookBounds(text, llm)
+    : { expectedStartLine: 0, expectedEndLine: Math.max(0, text.split('\n').length - 1) };
+
   return {
     text,
     meta: {
@@ -102,6 +120,8 @@ export async function ingest(path: string): Promise<Document> {
       format: ext.slice(1),
       wordCount: countWords(text),
       charCount: text.length,
+      expectedStartLine: bounds.expectedStartLine,
+      expectedEndLine: bounds.expectedEndLine,
     },
     warnings,
   };

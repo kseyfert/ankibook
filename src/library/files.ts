@@ -32,8 +32,25 @@ export function saveBook(facts: BookFacts, text: string, contexts: BookContexts)
   writeFileSync(bookContextsPath(facts.hash), JSON.stringify(contexts, null, 2));
 }
 
+/**
+ * Границы основного текста для книг, разобранных до того, как их научились
+ * определять: в таких файлах полей просто нет, а тип обещает числа.
+ *
+ * Подставляем «резать нечего» — ноль и последнюю строку. Последнюю
+ * приходится считать по <hash>.txt, и дёшево это не назвать; зато платится
+ * только за старые книги, у новых поля записаны при разборе. Чинить сам
+ * файл на чтении не станем: books/ — источник истины, и трогать его должен
+ * тот, кто разбирает книгу, а не тот, кто её открывает.
+ */
+function withBounds(f: BookFacts): BookFacts {
+  if (typeof f.expectedStartLine === 'number' && typeof f.expectedEndLine === 'number') return f;
+  const p = bookTextPath(f.hash);
+  const lineCount = existsSync(p) ? readFileSync(p, 'utf8').split('\n').length : 1;
+  return { ...f, expectedStartLine: 0, expectedEndLine: lineCount - 1 };
+}
+
 export function loadBook(hash: string): BookFacts {
-  return JSON.parse(readFileSync(bookFactsPath(hash), 'utf8')) as BookFacts;
+  return withBounds(JSON.parse(readFileSync(bookFactsPath(hash), 'utf8')) as BookFacts);
 }
 
 /** Примеры предложений. Файла может не быть — книга разбиралась старой версией. */
@@ -49,7 +66,7 @@ export function listBooks(): BookFacts[] {
   if (!existsSync(BOOKS_DIR)) return [];
   return readdirSync(BOOKS_DIR)
     .filter((f) => f.endsWith('.json') && !SIDECARS.some((s) => f.endsWith(s)))
-    .map((f) => JSON.parse(readFileSync(join(BOOKS_DIR, f), 'utf8')) as BookFacts)
+    .map((f) => withBounds(JSON.parse(readFileSync(join(BOOKS_DIR, f), 'utf8')) as BookFacts))
     .sort((a, b) => a.addedAt.localeCompare(b.addedAt));
 }
 

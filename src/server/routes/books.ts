@@ -4,10 +4,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { addBook } from '../../library/add-book.js';
 import { listBooks, loadContexts, loadDictionary, loadExcluded, loadProfile } from '../../library/files.js';
-import { rebuild } from '../../library/rebuild.js';
+import { rebuild, NO_EXCLUSIONS } from '../../library/rebuild.js';
 import { isEligible, selectCandidates, type Candidate } from '../../library/score.js';
 import { loadSession, saveSession } from '../session.js';
 import { posShort } from '../../library/pos.js';
+import { llmIfConfigured } from '../../llm/index.js';
 import { tuning } from '../../config/index.js';
 
 export const books = new Hono();
@@ -48,7 +49,7 @@ books.post('/', async (c) => {
   writeFileSync(path, Buffer.from(await file.arrayBuffer()));
 
   try {
-    const { facts, contextCount } = await addBook(path);
+    const { facts, contextCount } = await addBook(path, llmIfConfigured());
     const s = loadSession();
     const next = saveSession({ ...s, step: 3, bookHash: facts.hash, decisions: {}, deselected: [] });
     return c.json({
@@ -61,6 +62,8 @@ books.post('/', async (c) => {
         charCount: facts.charCount,
         lemmaCount: facts.entries.length,
         contextCount,
+        expectedStartLine: facts.expectedStartLine,
+        expectedEndLine: facts.expectedEndLine,
       },
       session: next,
     });
@@ -87,7 +90,7 @@ books.get('/:hash/diff', (c) => {
   if (!book) return c.json({ error: 'Книга не найдена' }, 404);
 
   const profile = loadProfile();
-  const { entries, diff } = rebuild(profile, new Map());
+  const { entries, diff } = rebuild(profile, NO_EXCLUSIONS);
   const excluded = loadExcluded(hash);
 
   const newOnes = diff.added

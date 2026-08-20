@@ -1,8 +1,8 @@
-import type { LlmPort } from './llm.js';
-import { extractJson } from './llm.js';
+import type { LlmPort } from '../llm/index.js';
+import { extractJson } from '../llm/index.js';
 import { checkLeak, checkAmbiguity, checkFormat, fixBlank } from './validate.js';
 import type { Deck } from '../library/score.js';
-import { speakSystem, readSystem, fixSystem, fillBlankSystem, wordPrompt, fixPrompt } from './prompts.js';
+import { speakSystem, readSystem, fixSystem, fillBlankSystem, wordPrompt, fixPrompt } from '../llm/prompts.js';
 import { tuning } from '../config/index.js';
 
 export interface Card {

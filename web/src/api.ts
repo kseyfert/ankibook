@@ -35,6 +35,14 @@ export interface BookInfo {
   charCount: number;
   lemmaCount: number;
   contextCount: number;
+  /**
+   * Где, по мнению модели, начинается и кончается основной текст: за этими
+   * границами лицензии, титул, оглавление, реклама изданий. Ничего не
+   * обрезано, текст сохранён целиком — это подсказка к будущему шагу разбора.
+   * 0 и последняя строка означают «резать нечего».
+   */
+  expectedStartLine: number;
+  expectedEndLine: number;
 }
 
 export interface DiffWord {

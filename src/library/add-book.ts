@@ -5,6 +5,7 @@ import { ingest } from '../text/ingest.js';
 import { tokenize } from '../text/tokenize.js';
 import { aggregate } from '../text/aggregate.js';
 import { bookExists, saveBook } from './files.js';
+import type { LlmPort } from '../llm/index.js';
 import type { BookFacts, BookContexts, BookEntry } from './types.js';
 import { tuning } from '../config/index.js';
 
@@ -74,7 +75,7 @@ export interface AddResult {
   contextCount: number;
 }
 
-export async function addBook(path: string): Promise<AddResult> {
+export async function addBook(path: string, llm: LlmPort | null): Promise<AddResult> {
   const hash = createHash('sha256').update(readFileSync(path)).digest('hex').slice(0, 16);
 
   if (bookExists(hash)) {
@@ -83,7 +84,7 @@ export async function addBook(path: string): Promise<AddResult> {
     );
   }
 
-  const doc = await ingest(path);
+  const doc = await ingest(path, llm);
   const entries = aggregate(tokenize(doc.text));
 
   const facts: BookFacts = {
@@ -95,6 +96,8 @@ export async function addBook(path: string): Promise<AddResult> {
     addedAt: new Date().toISOString(),
     wordCount: doc.meta.wordCount,
     charCount: doc.meta.charCount,
+    expectedStartLine: doc.meta.expectedStartLine,
+    expectedEndLine: doc.meta.expectedEndLine,
     entries,
   };
 

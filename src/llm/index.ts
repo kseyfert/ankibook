@@ -1,9 +1,14 @@
 /**
- * Порт для LLM.
+ * Порт для LLM и клиент к Anthropic.
+ *
+ * Отдельная папка, а не cards/: модель нужна не только карточкам. Границы
+ * основного текста книги определяются на стадии разбора файла (text/), и
+ * зависимость text/ → cards/ означала бы, что разбор текста знает про
+ * колоды и повторение — то есть про вещи, до которых ему нет дела.
  *
  * Интерфейс, а не прямой вызов клиента: тесты подставляют заглушку,
  * а веб-версия сможет проксировать запрос через свой бэкенд, не трогая
- * логику генерации.
+ * логику вызывающих.
  */
 
 export interface LlmPort {
@@ -29,7 +34,9 @@ export class AnthropicLlm implements LlmPort {
       body: JSON.stringify({
         model: tuning.generation.model,
         max_tokens: tuning.generation.maxTokens,
-        system,
+        // Пустую системную часть не отправляем: у одноразовых запросов вся
+        // инструкция лежит в самом сообщении, и пустое поле только мусорит.
+        ...(system ? { system } : {}),
         messages: [{ role: 'user', content: user }],
       }),
     });
@@ -103,4 +110,15 @@ export function extractJson<T>(raw: string): T {
     return chunks as T;
   }
   return chunks[0] as T;
+}
+
+/**
+ * Модель, если она настроена.
+ *
+ * Не бросает: часть команд работает и без ключа, и разбор книги от него
+ * не зависит — без модели просто не будет догадки о границах. Явный `null`
+ * заставляет вызывающего решить, что делать, а не узнать об этом падением.
+ */
+export function llmIfConfigured(): LlmPort | null {
+  return process.env.ANTHROPIC_API_KEY ? new AnthropicLlm() : null;
 }

@@ -1,6 +1,6 @@
 import { readFileSync, existsSync, appendFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { AnthropicLlm } from '../cards/llm.js';
+import { AnthropicLlm } from '../llm/index.js';
 import { tuning, argNum } from '../config/index.js';
 import { generateCards, type Card } from '../cards/generate.js';
 import { loadDictionary, listBooks, loadContexts, USER_DIR, ensureDirs } from '../library/files.js';

@@ -7,6 +7,22 @@ import { zipf } from './freq.js';
 
 export const NEXT_PATH = join(USER_DIR, 'dictionary.next.jsonl');
 
+/**
+ * Отказы пользователя: hash книги → леммы, которые он из неё не взял.
+ *
+ * Только для чтения: пересборка в них не пишет, и `ReadonlyMap` говорит это
+ * компилятору, а не комментарию.
+ */
+export type Exclusions = ReadonlyMap<string, ReadonlySet<string>>;
+
+/**
+ * Пересборка, не знающая ни про какие отказы — «что вообще есть в книгах».
+ *
+ * Нужна шагу отбора: считай он по сохранённому решению, отказанное слово
+ * исчезло бы из списка вместе с возможностью передумать.
+ */
+export const NO_EXCLUSIONS: Exclusions = new Map();
+
 export interface RebuildDiff {
   books: number;
   total: number;
@@ -36,7 +52,7 @@ export interface RebuildDiff {
  */
 export function rebuild(
   profile: Profile,
-  excluded = loadAllExcluded(),
+  excluded: Exclusions = loadAllExcluded(),
 ): { entries: Map<string, DictEntry>; diff: RebuildDiff } {
   const books = listBooks();
   const prev = loadDictionary();

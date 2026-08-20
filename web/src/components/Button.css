@@ -1,0 +1,12 @@
+.btn {
+    font: inherit; font-size: var(--t-sm);
+    padding: var(--s-2) var(--s-4);
+    border: var(--line); border-radius: var(--radius);
+    background: transparent; color: var(--ink); cursor: pointer;
+    transition: background 120ms, border-color 120ms;
+}
+.btn:hover:not(:disabled) { background: var(--paper-deep); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn--primary { background: var(--speak); border-color: var(--speak); color: var(--paper); }
+.btn--primary:hover:not(:disabled) { filter: brightness(1.15); }
+.btn--quiet { border-color: transparent; color: var(--ink-soft); padding-inline: var(--s-2); }

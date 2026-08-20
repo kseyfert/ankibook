@@ -1,0 +1,17 @@
+.choice { display: inline-flex; border: var(--line); border-radius: var(--radius); overflow: hidden; }
+.choice__opt {
+    font: inherit; font-size: var(--t-xs);
+    padding: var(--s-1) var(--s-3);
+    background: transparent; color: var(--ink-soft);
+    border: 0; border-left: var(--line); cursor: pointer;
+    white-space: nowrap;
+    transition: background 120ms, color 120ms;
+}
+.choice__opt:first-child { border-left: 0; }
+.choice__opt:hover:not(.choice__opt--on) { background: var(--paper-deep); color: var(--ink); }
+
+/* Выбранное состояние окрашено по колоде: цвет здесь несёт смысл,
+   speak и read различаются во всём интерфейсе одинаково. */
+.choice__opt--on { color: var(--ink); font-weight: 600; background: var(--paper-deep); }
+.choice__opt--speak.choice__opt--on { background: var(--speak-bg); color: var(--speak); }
+.choice__opt--read.choice__opt--on { background: var(--read-bg); color: var(--read); }

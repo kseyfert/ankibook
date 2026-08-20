@@ -35,6 +35,12 @@ export function loadBook(hash: string): BookFacts {
   return JSON.parse(readFileSync(bookFactsPath(hash), 'utf8')) as BookFacts;
 }
 
+/** Примеры предложений. Файла может не быть — книга разбиралась старой версией. */
+export function loadContexts(hash: string): BookContexts {
+  const p = bookContextsPath(hash);
+  return existsSync(p) ? (JSON.parse(readFileSync(p, 'utf8')) as BookContexts) : {};
+}
+
 export function listBooks(): BookFacts[] {
   if (!existsSync(BOOKS_DIR)) return [];
   return readdirSync(BOOKS_DIR)

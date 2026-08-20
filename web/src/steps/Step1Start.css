@@ -1,0 +1,25 @@
+.start__title { font-size: var(--t-xl); font-weight: 650; letter-spacing: -0.02em; margin: 0; }
+.start__sub { font-size: var(--t-sm); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-soft); margin: var(--s-5) 0 0; }
+
+.drop {
+    display: flex; flex-direction: column; align-items: center; gap: var(--s-3);
+    padding: var(--s-7) var(--s-4);
+    border: 1px dashed var(--rule); border-radius: var(--radius);
+    background: var(--paper-deep);
+    transition: border-color 120ms, background 120ms;
+}
+.drop--over { border-color: var(--speak); background: var(--speak-bg); }
+.drop--busy { opacity: 0.6; }
+.drop__lead { margin: 0; font-size: var(--t-lg); }
+.drop__formats { margin: 0; font-size: var(--t-xs); letter-spacing: 0.04em; }
+
+.booklist { list-style: none; margin: 0; padding: 0; border-top: var(--line); }
+.bookrow {
+    display: flex; justify-content: space-between; align-items: baseline; gap: var(--s-4);
+    width: 100%; padding: var(--s-3) var(--s-2);
+    font: inherit; text-align: left; color: inherit;
+    background: none; border: 0; border-bottom: var(--line); cursor: pointer;
+}
+.bookrow:hover { background: var(--paper-deep); }
+.bookrow__title { font-weight: 550; }
+.bookrow__meta { font-size: var(--t-xs); white-space: nowrap; }

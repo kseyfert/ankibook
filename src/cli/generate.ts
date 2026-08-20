@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { AnthropicLlm } from '../cards/llm.js';
 import { tuning, argNum } from '../config/index.js';
 import { generateCards, type Card } from '../cards/generate.js';
-import { loadDictionary, listBooks, bookContextsPath, USER_DIR, ensureDirs } from '../library/files.js';
+import { loadDictionary, listBooks, loadContexts, USER_DIR, ensureDirs } from '../library/files.js';
 import type { BookContexts } from '../library/types.js';
 
 const CARDS = join(USER_DIR, 'cards.jsonl');
@@ -13,8 +13,7 @@ const books = listBooks();
 if (!books.length) { console.error('Нет книг.'); process.exit(1); }
 const book = books[books.length - 1];
 
-const ctxPath = bookContextsPath(book.hash);
-const contexts: BookContexts = existsSync(ctxPath) ? JSON.parse(readFileSync(ctxPath, 'utf8')) : {};
+const contexts: BookContexts = loadContexts(book.hash);
 
 // уже сгенерированное не трогаем
 const done = new Set<string>();

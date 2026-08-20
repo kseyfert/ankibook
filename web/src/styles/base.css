@@ -1,0 +1,32 @@
+@import './tokens.css';
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    font-size: var(--t-md);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible { outline: 2px solid var(--speak); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+.app { max-width: 860px; margin: 0 auto; padding: var(--s-6) var(--s-4) var(--s-7); }
+.mono { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+.muted { color: var(--ink-soft); }
+.row { display: flex; align-items: center; gap: var(--s-3); }
+.stack { display: flex; flex-direction: column; gap: var(--s-4); }
+/* Общие примитивы, используемые несколькими шагами. Лежат здесь, а не
+   в CSS первого попавшегося шага: иначе вид блока зависит от того,
+   смонтирован ли сейчас чужой компонент. */
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--s-4); margin: 0; padding: var(--s-4) 0; border-block: var(--line); }
+.facts dt { font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-soft); }
+.facts dd { margin: var(--s-1) 0 0; font-size: var(--t-lg); }
+.error { color: var(--warn); font-size: var(--t-sm); margin: 0; }

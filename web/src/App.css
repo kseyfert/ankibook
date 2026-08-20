@@ -1,0 +1,11 @@
+.banner {
+    padding: var(--s-2) var(--s-3);
+    border-left: 2px solid var(--warn);
+    background: var(--paper-deep);
+    font-size: var(--t-sm);
+    margin: 0 0 var(--s-4);
+}
+.linklike {
+    font: inherit; font-size: inherit; color: var(--speak);
+    background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline;
+}

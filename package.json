@@ -13,17 +13,31 @@
     "clean": "tsx src/cli/clean.ts",
     "ingest": "tsx src/cli/ingest.ts",
     "tokens": "tsx src/cli/tokens.ts",
-    "typecheck": "tsc"
+    "typecheck": "tsc",
+    "server": "tsx watch src/server/index.ts",
+    "web": "vite --config web/vite.config.ts",
+    "dev": "concurrently -n api,web -c magenta,cyan \"npm:server\" \"npm:web\"",
+    "typecheck:web": "tsc -p web/tsconfig.json",
+    "build:web": "vite build --config web/vite.config.ts"
   },
   "dependencies": {
+    "@hono/node-server": "^2.1.1",
+    "hono": "^4.13.3",
     "officeparser": "^7.6.1",
     "wink-eng-lite-web-model": "^1.8.1",
     "wink-nlp": "^2.4.0"
   },
   "devDependencies": {
     "@types/node": "^26.2.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^6.1.0",
+    "concurrently": "^10.0.5",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "tsx": "^4.23.12",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vite": "^8.2.2"
   },
   "private": true
 }

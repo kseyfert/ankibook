@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { listBooks, loadDictionary, saveDictionary, dictPath, USER_DIR } from './files.js';
+import { SKIP_POS } from './pos.js';
 import type { DictEntry, Profile } from './types.js';
 import { zipf } from './freq.js';
 
@@ -38,6 +39,10 @@ export function rebuild(profile: Profile): { entries: Map<string, DictEntry>; di
       const z = zipf(e.lemma);
       // Служебный каркас языка — the, and, of. Не понадобится никогда.
       if (z > profile.recordZipf) continue;
+      // Имена собственные, междометия, неопознанное.
+      if (SKIP_POS.has(e.pos)) continue;
+      // Двухбуквенные — служебные слова и артефакты вроде «o» из «O Spring!».
+      if (e.lemma.length < 3) continue;
 
       let d = next.get(e.lemma);
       if (!d) {

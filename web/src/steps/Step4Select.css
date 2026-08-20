@@ -1,0 +1,39 @@
+.sel__title { font-size: var(--t-xl); font-weight: 650; letter-spacing: -0.02em; margin: 0; }
+.sel__hint, .sel__note, .sel__rest { font-size: var(--t-xs); margin: 0; }
+.sel__actions { padding-top: var(--s-4); border-top: var(--line); }
+
+.sel__group { display: flex; align-items: baseline; gap: var(--s-2); flex-wrap: wrap; }
+.sel__deck {
+    font-size: var(--t-sm); font-weight: 600; margin: var(--s-5) 0 0;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    margin-inline-end: auto;
+}
+.sel__deck--speak { color: var(--speak); }
+.sel__deck--read  { color: var(--read); }
+
+.cands { list-style: none; margin: 0; padding: 0; }
+
+.cand { padding: var(--s-3) 0; border-bottom: var(--line); }
+/* Отложенное видно, но не отвлекает: строка остаётся на месте, чтобы
+   решение можно было пересмотреть, не разыскивая слово заново. */
+.cand--out { opacity: 0.4; }
+
+.cand__head { display: flex; align-items: baseline; gap: var(--s-3); }
+.cand__lemma { font-weight: 600; font-size: var(--t-md); }
+.cand__pos { font-size: var(--t-xs); }
+.cand__nums { font-size: var(--t-xs); margin-inline-start: auto; }
+
+.cand__warn {
+    margin: var(--s-2) 0 0; font-size: var(--t-xs); color: var(--warn);
+}
+
+.cand__ctx {
+    list-style: none; margin: var(--s-2) 0 0; padding: 0 0 0 var(--s-3);
+    border-left: 2px solid var(--rule);
+    font-size: var(--t-sm); color: var(--ink-soft);
+}
+.cand__ctx li { margin-bottom: var(--s-1); }
+.cand__ctx li:last-child { margin-bottom: 0; }
+
+.cand__foot { display: flex; align-items: center; gap: var(--s-3); margin-top: var(--s-3); flex-wrap: wrap; }
+.cand__reason { font-size: var(--t-xs); }

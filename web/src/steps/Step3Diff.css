@@ -1,0 +1,52 @@
+.diff__title { font-size: var(--t-xl); font-weight: 650; letter-spacing: -0.02em; margin: 0; }
+.diff__hint { font-size: var(--t-xs); margin: var(--s-3) 0 0; }
+
+.diff__bar {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    gap: var(--s-5); flex-wrap: wrap;
+    padding-bottom: var(--s-3);
+}
+.diff__actions { display: flex; gap: var(--s-2); }
+.diff__counter { font-size: var(--t-xs); margin: 0; }
+
+.wordtable { width: 100%; border-collapse: collapse; font-size: var(--t-sm); table-layout: fixed; }
+.wordtable th {
+    text-align: left; font-weight: 500; font-size: var(--t-xs);
+    text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-soft);
+    padding: 0 0 var(--s-2); border-bottom: var(--line);
+}
+.wordtable td { padding: var(--s-2) 0; border-bottom: var(--line); }
+
+/* Явные ширины: без них колонка со счётчиком растягивалась и число
+   уезжало вправо, к самой шкале, а графа выглядела пустой.
+
+   Отступ задан отдельным правилом на th и td: селектор `.wordtable td`
+   специфичнее, чем `.wordtable__num`, и его сокращённый padding обнулял
+   padding-right у ячейки. Заголовок отступ получал, число — нет, и графа
+   разъезжалась ровно на эти 24 пикселя. */
+.wordtable__check { width: 32px; }
+.wordtable__pos   { width: 150px; }
+.wordtable__num   { width: 96px; text-align: right; }
+/* Шире самой шкалы (84px): в заголовке помещается «Популярность» со стрелкой. */
+.wordtable__scale { width: 132px; }
+.wordtable th.wordtable__num,
+.wordtable td.wordtable__num { padding-right: var(--s-5); }
+
+.wordtable__lemma { font-weight: 550; }
+.wordtable__check input { accent-color: var(--speak); cursor: pointer; }
+
+.wordtable__row--off td { opacity: 0.35; }
+.wordtable__row--off .wordtable__check { opacity: 1; }
+.wordtable__row--off .wordtable__lemma { text-decoration: line-through; }
+
+/* Заголовок-кнопка сортировки. Наследует вид обычного th: сортировка —
+   свойство колонки, а не отдельный элемент управления рядом с ней. */
+.sorthead {
+    font: inherit; color: inherit; letter-spacing: inherit; text-transform: inherit;
+    background: none; border: 0; padding: 0; cursor: pointer;
+    display: inline-flex; align-items: baseline; gap: var(--s-1);
+}
+.sorthead:hover { color: var(--ink); }
+.sorthead--on { color: var(--ink); font-weight: 600; }
+/* Стрелка занимает место всегда, иначе заголовок дёргается при смене колонки. */
+.sorthead__arrow { display: inline-block; width: 0.7em; text-align: center; opacity: 0.8; }

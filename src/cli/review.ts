@@ -1,8 +1,7 @@
-import { readFileSync, existsSync } from 'node:fs';
 import { createInterface } from 'node:readline';
 import { selectCandidates, type Candidate } from '../library/score.js';
 import {
-  loadDictionary, saveDictionary, loadProfile, listBooks, bookContextsPath,
+  loadDictionary, saveDictionary, loadProfile, listBooks, loadContexts,
 } from '../library/files.js';
 import type { BookContexts, DeckStatus } from '../library/types.js';
 
@@ -45,10 +44,7 @@ async function main(): Promise<void> {
   }
   const book = books[books.length - 1];
 
-  const ctxPath = bookContextsPath(book.hash);
-  const contexts: BookContexts = existsSync(ctxPath)
-    ? JSON.parse(readFileSync(ctxPath, 'utf8'))
-    : {};
+  const contexts: BookContexts = loadContexts(book.hash);
 
   const dict = loadDictionary();
   const cands = selectCandidates(dict, book.hash, book.wordCount, profile, TOP_SPEAK, TOP_READ);

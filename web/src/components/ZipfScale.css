@@ -1,0 +1,4 @@
+.zscale { position: relative; display: inline-block; width: 84px; height: 12px; vertical-align: middle; }
+.zscale__track { position: absolute; inset: 5px 0 auto 0; height: 2px; background: linear-gradient(90deg, var(--rule), var(--paper-deep)); }
+.zscale__known { position: absolute; top: 1px; width: 1px; height: 10px; background: var(--ink-soft); opacity: 0.7; }
+.zscale__dot { position: absolute; top: 3px; width: 6px; height: 6px; margin-left: -3px; border-radius: 50%; background: var(--speak); }

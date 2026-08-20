@@ -1,0 +1,11 @@
+.steps {
+    display: flex; flex-wrap: wrap; gap: var(--s-4);
+    padding-bottom: var(--s-4); margin-bottom: var(--s-6);
+    border-bottom: var(--line);
+    font-size: var(--t-xs); letter-spacing: 0.02em;
+}
+.steps__item { display: inline-flex; align-items: baseline; gap: var(--s-2); color: var(--ink-soft); }
+.steps__num { font-size: 0.6875rem; opacity: 0.6; }
+.steps__item--now { color: var(--ink); font-weight: 600; }
+.steps__item--now .steps__num { color: var(--speak); opacity: 1; }
+.steps__item--done .steps__num { text-decoration: line-through; }

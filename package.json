@@ -10,7 +10,8 @@
     "tok": "tsx src/tok-cli.ts",
     "add": "tsx src/add-cli.ts",
     "rebuild": "tsx src/rebuild-cli.ts",
-    "review": "tsx src/review-cli.ts"
+    "review": "tsx src/review-cli.ts",
+    "generate": "tsx --env-file=.env src/generate-cli.ts"
   },
   "dependencies": {
     "officeparser": "^7.6.1",

@@ -95,3 +95,80 @@ export function checkAmbiguity(answer: string, filled: string): CheckResult {
     problems: [`контекст допускает "${f}" наравне с "${a}" — предложение не сужает выбор`],
   };
 }
+
+/**
+ * Формат карточки.
+ *
+ * Проверка формальная и бесплатная, но нужная: модель регулярно теряет
+ * русскую подсказку (breeze вышел без неё), а без подсказки возвращается
+ * ровно та неоднозначность timid/tired, ради которой подсказку и вводили.
+ *
+ * Заодно требуем лемму на обороте: в пропуске стоит нужная ФОРМА (chopped),
+ * а знать надо словарное слово (chop). Без леммы в колоде окажется форма,
+ * и связь со словарём потеряется.
+ */
+export function checkFormat(
+  front: string,
+  back: string,
+  answer: string,
+  lemma: string,
+  deck: 'speak' | 'read',
+): CheckResult {
+  const problems: string[] = [];
+
+  if (deck === 'speak') {
+    const blank = front.match(/([a-z])(_{2,})/i);
+    if (!blank) {
+      problems.push('на лицевой стороне нет пропуска вида "t___"');
+    } else {
+      // Пропуск обязан соответствовать ответу. Реальный случай: ответ chew,
+      // а в предложении стояло "s_____" — и буква чужая, и длина не та.
+      // Все три другие проверки это пропустили: маскировка пропуска в
+      // checkLeak, а модель при заполнении вслепую прочитала русскую
+      // подсказку и ответила верно, проигнорировав букву.
+      // Проверяем только БУКВУ. Длину не проверяем: модели плохо считают
+      // символы, и отвергать карточку из-за лишнего подчёркивания значит
+      // жечь попытки перегенерации на ерунде. Длина чинится в коде
+      // функцией fixBlank — детерминированно и бесплатно.
+      const [, letter] = blank;
+      const a = answer.trim();
+      if (letter.toLowerCase() !== a[0]?.toLowerCase()) {
+        problems.push(`пропуск начинается на "${letter}", а ответ — "${a}"`);
+      }
+    }
+    if (!/\([^)]*[а-яё][^)]*\)/i.test(front)) {
+      problems.push('на лицевой стороне нет русской подсказки в скобках');
+    }
+  }
+
+  // Граница слова обязательна: "chopped".includes("chop") истинно,
+  // и без \b форма проходила бы за словарное слово.
+  const l = lemma.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const hasLemma = new RegExp(`(^|[^a-z])${l}([^a-z]|$)`, 'i').test(back);
+  if (!hasLemma) {
+    const a = answer.toLowerCase();
+    problems.push(
+      a === l
+        ? `на обороте нет самого слова "${lemma}"`
+        : `на обороте форма "${answer}", но нет словарной формы "${lemma}"`,
+    );
+  }
+
+  return { ok: problems.length === 0, problems };
+}
+
+/**
+ * Приводит длину пропуска в соответствие с ответом.
+ *
+ * Модель ставит подчёркивания на глаз и часто ошибается на одно-два.
+ * Это чинится арифметикой, а не перегенерацией.
+ */
+export function fixBlank(front: string, answer: string): string {
+  const a = answer.trim();
+  if (a.length < 2) return front;
+  return front.replace(
+    /([a-z])(_{2,})/i,
+    (m, letter: string) =>
+      letter.toLowerCase() === a[0].toLowerCase() ? letter + '_'.repeat(a.length - 1) : m,
+  );
+}

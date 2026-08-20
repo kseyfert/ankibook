@@ -11,7 +11,9 @@
     "add": "tsx src/add-cli.ts",
     "rebuild": "tsx src/rebuild-cli.ts",
     "review": "tsx src/review-cli.ts",
-    "generate": "tsx --env-file=.env src/generate-cli.ts"
+    "generate": "tsx --env-file=.env src/generate-cli.ts",
+    "export": "tsx src/export-cli.ts",
+    "clean": "tsx src/clean-cli.ts"
   },
   "dependencies": {
     "officeparser": "^7.6.1",

@@ -6,9 +6,11 @@ import {
 } from './store/files.js';
 import type { BookContexts, DeckStatus } from './store/types.js';
 
-const TOP_N = Number(process.env.TOP_N ?? 40);
-/** Показываем меньше, чем храним: глазами больше трёх не читается. */
-const SHOW_CONTEXTS = 3;
+import { tuning, argNum } from './config.js';
+
+const TOP_SPEAK = argNum('speak', tuning().review.topSpeak);
+const TOP_READ = argNum('read', tuning().review.topRead);
+const SHOW_CONTEXTS = tuning().contexts.maxShown;
 
 type Action = 'speak' | 'read' | 'skip' | 'reject' | 'known' | 'back' | 'quit';
 
@@ -49,10 +51,11 @@ async function main(): Promise<void> {
     : {};
 
   const dict = loadDictionary();
-  const cands = selectCandidates(dict, book.hash, book.wordCount, profile, TOP_N);
+  const cands = selectCandidates(dict, book.hash, book.wordCount, profile, TOP_SPEAK, TOP_READ);
 
   console.log(`${book.title ?? book.sourceName}`);
-  console.log(`кандидатов к показу: ${cands.length} (топ по приоритету)`);
+  const nSpeak = cands.filter((c) => c.suggested === 'speak').length;
+  console.log(`кандидатов к показу: ${cands.length} — speak ${nSpeak}, read ${cands.length - nSpeak}`);
 
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   let closed = false;

@@ -6,14 +6,9 @@ import { tokenize } from './tokenize.js';
 import { aggregate } from './aggregate.js';
 import { bookExists, saveBook } from './store/files.js';
 import type { BookFacts, BookContexts, BookEntry } from './store/types.js';
+import { tuning } from './config.js';
 
-/** Сколько примеров сохранять на лемму. Показываем при отборе меньше —
- *  три хватает глазами, — но в генерацию карточек уходят все: там модель
- *  группирует контексты по значениям, и пропущенное второе значение
- *  потом ничем не восстановить. */
-const MAX_CONTEXTS = 10;
-/** Не показывать обрывки короче этого. */
-const MIN_CONTEXT_LEN = 25;
+
 
 /**
  * Равномерная выборка n элементов из массива.
@@ -61,12 +56,13 @@ function collectContexts(text: string, entries: BookEntry[]): BookContexts {
   const out: BookContexts = {};
   for (const e of entries) {
     // выборка с запасом: часть предложений отсеется по длине или как дубли
-    const picked = evenly(e.occurrences, MAX_CONTEXTS * 2);
+    const { maxStored, minLength } = tuning().contexts;
+    const picked = evenly(e.occurrences, maxStored * 2);
     const seen = new Set<string>();
     for (const pos of picked) {
-      if (seen.size >= MAX_CONTEXTS) break;
+      if (seen.size >= maxStored) break;
       const s = sentenceAt(text, pos);
-      if (s.length >= MIN_CONTEXT_LEN) seen.add(s);
+      if (s.length >= minLength) seen.add(s);
     }
     if (seen.size) out[e.lemma] = [...seen];
   }

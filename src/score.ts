@@ -1,4 +1,5 @@
 import type { DictEntry, Profile } from './store/types.js';
+import { tuning } from './config.js';
 
 /**
  * Скоринг кандидатов. Две НЕЗАВИСИМЫЕ оси, их нельзя складывать в одну:
@@ -15,12 +16,7 @@ import type { DictEntry, Profile } from './store/types.js';
  * иначе → read.
  */
 
-/** Ниже этой частотности слово в жизни практически не встретится. */
-const FLOOR_ZIPF = 2.0;
-/** Столько вхождений уже дают максимальный bookValue. */
-const SATURATION = 40;
-/** Со стольких книг слово считается частью языка, а не жаргоном одной книги. */
-const HISTORY_OVERRIDE = 3;
+
 
 const CONTENT_POS = new Set(['NOUN', 'VERB', 'ADJ', 'ADV']);
 
@@ -60,7 +56,7 @@ export function isEligible(d: DictEntry, profile: Profile): boolean {
   if (d.zipf === 0 && d.totalCount < 4) return false;
   // Выше порога знания. Исключение: слово из третьей книги — раз оно
   // упорно попадается именно в твоём чтении, глобальная статистика врёт.
-  if (d.zipf >= profile.knownZipf && d.bookCount < HISTORY_OVERRIDE) return false;
+  if (d.zipf >= profile.knownZipf && d.bookCount < tuning().scoring.historyOverride) return false;
   // Единственное вхождение и никакой истории — свидетельств нет.
   if (d.totalCount === 1 && d.bookCount < 2) return false;
   return true;
@@ -76,10 +72,11 @@ export function scoreCandidate(
   const exp = expected(d.zipf, bookWords);
   const over = exp > 0 ? countInBook / exp : Infinity;
 
-  const bookValue = clamp01(Math.log2(Math.max(1, countInBook)) / Math.log2(SATURATION));
+  const t = tuning().scoring;
+  const bookValue = clamp01(Math.log2(Math.max(1, countInBook)) / Math.log2(t.saturation));
 
-  const span = profile.knownZipf - FLOOR_ZIPF;
-  const base = d.zipf === 0 ? 0 : clamp01((d.zipf - FLOOR_ZIPF) / span);
+  const span = profile.knownZipf - t.floorZipf;
+  const base = d.zipf === 0 ? 0 : clamp01((d.zipf - t.floorZipf) / span);
   // История — свидетельство из ТВОЕГО чтения, оно сильнее глобальной
   // статистики. Логарифм: вторая книга даёт много, десятая уже мало.
   const historyBonus = Math.min(0.5, 0.3 * Math.log2(1 + Math.max(0, d.bookCount - 1)));
@@ -89,11 +86,11 @@ export function scoreCandidate(
   // другое значение (dolphin у Хемингуэя — корифена; stern — корма),
   // иногда просто тема книги (breeze, turtle). Статистикой не различить,
   // поэтому это ПОМЕТКА для глаз, а не решение о колоде.
-  const checkSense = d.zipf >= profile.knownZipf - 0.3 && over > 50;
+  const checkSense = d.zipf >= profile.knownZipf - 0.3 && over > t.checkSenseRatio;
 
   let suggested: Deck;
   let reason: string;
-  if (lifeValue >= 0.5) {
+  if (lifeValue >= t.speakThreshold) {
     suggested = 'speak';
     reason = d.bookCount > 1 ? `общеупотребимое, ${d.bookCount} кн.` : 'общеупотребимое';
   } else {
@@ -102,7 +99,9 @@ export function scoreCandidate(
   }
 
   const priority =
-    suggested === 'speak' ? 0.7 * lifeValue + 0.3 * bookValue : 0.8 * bookValue + 0.2 * lifeValue;
+    suggested === 'speak'
+      ? t.speakWeights.life * lifeValue + t.speakWeights.book * bookValue
+      : t.readWeights.book * bookValue + t.readWeights.life * lifeValue;
 
   return {
     entry: d,
@@ -117,16 +116,33 @@ export function scoreCandidate(
   };
 }
 
+/**
+ * Топ берётся ПО КАЖДОЙ КОЛОДЕ ОТДЕЛЬНО.
+ *
+ * Общий топ по priority не работает: формулы у колод разные, и speak-приоритет
+ * строится на lifeValue, который высок ровно у тех слов, что в speak и уходят.
+ * На реальной книге общий топ-40 дал 37 speak и 3 read — за бортом остались
+ * skiff ×48, oar ×25, harpoon ×20, то есть самая характерная лексика книги.
+ * Сравнивать эти два числа между собой попросту нельзя.
+ */
 export function selectCandidates(
   dict: Map<string, DictEntry>,
   bookHash: string,
   bookWords: number,
   profile: Profile,
-  topN: number,
+  topSpeak: number,
+  topRead: number,
 ): Candidate[] {
-  return [...dict.values()]
+  const scored = [...dict.values()]
     .filter((d) => isEligible(d, profile) && (d.books[bookHash] ?? 0) > 0)
-    .map((d) => scoreCandidate(d, bookHash, bookWords, profile))
-    .sort((a, b) => b.priority - a.priority)
-    .slice(0, topN);
+    .map((d) => scoreCandidate(d, bookHash, bookWords, profile));
+
+  const pick = (deck: Deck, n: number) =>
+    scored
+      .filter((c) => c.suggested === deck)
+      .sort((a, b) => b.priority - a.priority)
+      .slice(0, n);
+
+  // speak первым: он требует больше внимания при просмотре
+  return [...pick('speak', topSpeak), ...pick('read', topRead)];
 }

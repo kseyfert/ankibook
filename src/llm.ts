@@ -11,8 +11,7 @@ export interface LlmPort {
   complete(system: string, user: string): Promise<string>;
 }
 
-const MODEL = 'claude-sonnet-4-6';
-const MAX_TOKENS = 2000;
+import { tuning } from './config.js';
 
 export class AnthropicLlm implements LlmPort {
   constructor(private apiKey = process.env.ANTHROPIC_API_KEY ?? '') {
@@ -28,8 +27,8 @@ export class AnthropicLlm implements LlmPort {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: MODEL,
-        max_tokens: MAX_TOKENS,
+        model: tuning().generation.model,
+        max_tokens: tuning().generation.maxTokens,
         system,
         messages: [{ role: 'user', content: user }],
       }),
@@ -47,10 +46,61 @@ export class AnthropicLlm implements LlmPort {
   }
 }
 
-/** Достаёт JSON из ответа: модель иногда оборачивает его в ```json. */
+/**
+ * Достаёт JSON из ответа модели.
+ *
+ * Просто взять всё от первой скобки до конца строки нельзя: модель
+ * регулярно дописывает пояснение после JSON или возвращает несколько
+ * объектов подряд вместо массива. Поэтому считаем баланс скобок и берём
+ * ровно один сбалансированный фрагмент, игнорируя скобки внутри строк.
+ */
+function balancedSlice(s: string, from: number): string | null {
+  const open = s[from];
+  const close = open === '[' ? ']' : '}';
+  let depth = 0;
+  let inStr = false;
+  let esc = false;
+
+  for (let i = from; i < s.length; i++) {
+    const c = s[i];
+    if (esc) { esc = false; continue; }
+    if (c === '\\') { esc = true; continue; }
+    if (c === '"') { inStr = !inStr; continue; }
+    if (inStr) continue;
+    if (c === open) depth++;
+    else if (c === close) {
+      depth--;
+      if (depth === 0) return s.slice(from, i + 1);
+    }
+  }
+  return null;
+}
+
 export function extractJson<T>(raw: string): T {
   const cleaned = raw.replace(/```json\s*|```/g, '').trim();
-  const start = cleaned.search(/[[{]/);
-  if (start === -1) throw new Error(`В ответе нет JSON: ${raw.slice(0, 120)}`);
-  return JSON.parse(cleaned.slice(start)) as T;
+
+  const chunks: unknown[] = [];
+  let pos = 0;
+  while (pos < cleaned.length) {
+    const start = cleaned.slice(pos).search(/[[{]/);
+    if (start === -1) break;
+    const abs = pos + start;
+    const slice = balancedSlice(cleaned, abs);
+    if (!slice) break;
+    try {
+      chunks.push(JSON.parse(slice));
+    } catch {
+      // невалидный фрагмент пропускаем и ищем следующий
+    }
+    pos = abs + slice.length;
+  }
+
+  if (!chunks.length) {
+    throw new Error(`В ответе нет валидного JSON: ${raw.slice(0, 160)}`);
+  }
+  // Несколько объектов подряд вместо массива — собираем в массив.
+  if (chunks.length > 1 && chunks.every((c) => !Array.isArray(c))) {
+    return chunks as T;
+  }
+  return chunks[0] as T;
 }

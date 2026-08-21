@@ -19,7 +19,10 @@
     "server:watch": "tsx watch --env-file-if-exists=.env src/server/index.ts",
     "web": "vite --config web/vite.config.ts",
     "dev": "concurrently -n api,web -c magenta,cyan \"npm:server:watch\" \"npm:web\"",
-    "build:web": "vite build --config web/vite.config.ts"
+    "build": "npm run build:server && npm run build:web",
+    "build:server": "tsc -p tsconfig.build.json",
+    "build:web": "vite build --config web/vite.config.ts",
+    "start": "node --env-file-if-exists=.env dist/server/index.js"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.1",

@@ -1,5 +1,9 @@
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
+import { serveStatic } from '@hono/node-server/serve-static';
+import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join, relative } from 'node:path';
 import { books } from './routes/books.js';
 import { session } from './routes/session.js';
 import { decisions } from './routes/decisions.js';
@@ -82,6 +86,38 @@ app.onError((err, c) => {
   return c.json({ error: err.message }, 500);
 });
 
+/**
+ * Собранный фронт отдаёт сам сервер.
+ *
+ * В разработке статику раздаёт vite и он же проксирует /api — двух портов
+ * там не жалко. Снаружи два порта означали бы либо второй туннель, либо
+ * веб-сервер перед ними; проще отдавать всё одним процессом.
+ *
+ * Путь считается от файла сервера, а не от текущей директории: и `src/`,
+ * и собранный `dist/` лежат на два уровня ниже корня, так что выражение
+ * одно на оба случая. serveStatic ждёт путь относительно cwd — приводим.
+ */
+const HERE = dirname(fileURLToPath(import.meta.url));
+const WEB = join(HERE, '..', '..', 'web', 'dist');
+
+if (existsSync(WEB)) {
+  const root = relative(process.cwd(), WEB) || '.';
+  app.use('/*', serveStatic({ root }));
+  // Мастер — одна страница: любой неизвестный путь отдаёт её, а не 404.
+  app.get('*', serveStatic({ path: join(root, 'index.html') }));
+} else {
+  console.warn(`Фронт не собран (${WEB} нет). Только API. Сборка: npm run build`);
+}
+
+
+/**
+ * Слушаем петлю, а не все интерфейсы.
+ *
+ * Наружу приложение выходит через туннель Cloudflare, который подключается
+ * с этой же машины. Открытый порт на публичном адресе означал бы вход
+ * в обход Zero Trust — то есть без всякой проверки, кто пришёл.
+ */
 const port = Number(process.env.PORT ?? 3001);
-serve({ fetch: app.fetch, port });
-console.log(`API на http://localhost:${port}`);
+const hostname = process.env.HOST ?? '127.0.0.1';
+serve({ fetch: app.fetch, port, hostname });
+console.log(`AnkiBook на http://${hostname}:${port}`);

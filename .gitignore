@@ -1,5 +1,7 @@
 /tmp
 /out-tsc
+/dist
+/web/dist
 
 /node_modules
 npm-debug.log*
@@ -19,3 +21,5 @@ yarn-error.log*
 .env
 
 .DS_Store
+ecosystem.config.cjs
+deploy

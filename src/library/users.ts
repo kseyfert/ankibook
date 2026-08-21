@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { dataDir } from '../config/index.js';
 
 /**
  * Пользователи — это папки.
@@ -8,7 +9,7 @@ import { join } from 'node:path';
  * и разойтись с действительностью он не может. Завёл папку руками — она
  * появилась в приложении; удалил — исчезла.
  */
-export const USERS_DIR = 'users';
+export const USERS_DIR = dataDir;
 
 /** Тот, кто есть всегда: с чего-то начинать надо, а выбирать не из чего. */
 export const DEFAULT_USER = 'Default';

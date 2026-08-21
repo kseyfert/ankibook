@@ -1,8 +1,10 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, type CSSProperties } from 'react';
 import { Button } from '../components/Button';
 import { useBooks } from '../hooks/useBooks';
 import { api, type BookInfo, type Session } from '../api';
 import './Step1Start.css';
+
+const n = (v: number) => v.toLocaleString('ru-RU');
 
 export function Step1Start({
                              onUploaded, onPick,
@@ -64,10 +66,19 @@ export function Step1Start({
           <ul className="booklist">
             {books.map((b) => (
               <li key={b.hash}>
-                <button className="bookrow" onClick={() => onPick(b.hash)}>
+                {/*
+                  Зелёная заливка — доля выгруженного от взятого в словарь.
+                  Число само по себе не показывает, сколько ещё идти;
+                  полоса показывает это, не занимая ни строки.
+                */}
+                <button
+                  className="bookrow"
+                  onClick={() => onPick(b.hash)}
+                  style={{ '--done-part': `${b.inDictionary ? (b.exported / b.inDictionary) * 100 : 0}%` } as CSSProperties}
+                >
                   <span className="bookrow__title">{b.title ?? b.sourceName}</span>
                   <span className="muted bookrow__meta mono">
-                    {b.lemmaCount} лемм · {b.candidatesLeft} не отобрано
+                    {n(b.lemmaCount)} лемм · в словаре {n(b.inDictionary)} · в Noji {n(b.exported)}
                   </span>
                 </button>
               </li>

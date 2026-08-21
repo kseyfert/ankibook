@@ -18,13 +18,10 @@ export const books = new Hono();
 
 /** Список книг с тем, что нужно для выбора на шаге 1. */
 books.get('/', (c) => {
-  const profile = loadProfile();
   const dict = loadDictionary();
   return c.json(
     listBooks().map((b) => {
-      const left = [...dict.values()].filter(
-        (d) => (d.books[b.hash] ?? 0) > 0 && isEligible(d, profile),
-      ).length;
+      const mine = [...dict.values()].filter((d) => (d.books[b.hash] ?? 0) > 0);
       return {
         hash: b.hash,
         title: b.title,
@@ -32,8 +29,19 @@ books.get('/', (c) => {
         sourceName: b.sourceName,
         addedAt: b.addedAt,
         wordCount: b.wordCount,
+        /** всего лемм в книге — сырой разбор, до всякой фильтрации */
         lemmaCount: b.entries.length,
-        candidatesLeft: left,
+        /** сколько из них ты решил взять в словарь */
+        inDictionary: mine.length,
+        /**
+         * Сколько уже уехало в Noji.
+         *
+         * Статус стоит на СЛОВЕ, а не на книге, поэтому слово, выгруженное
+         * вместе с другой книгой, посчитается и здесь. Так и надо: вопрос
+         * «сколько из этой книги я уже прошёл», а не «сколько выгрузил
+         * именно этим проходом».
+         */
+        exported: mine.filter((d) => d.speak === 'accepted' || d.read === 'accepted').length,
       };
     }),
   );

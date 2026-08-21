@@ -14,12 +14,25 @@
 .drop__formats { margin: 0; font-size: var(--t-xs); letter-spacing: 0.04em; }
 
 .booklist { list-style: none; margin: 0; padding: 0; border-top: var(--line); }
+/* Строка книги — она же полоса прогресса.
+   Заливка градиентом, а не отдельным элементом: прогресс здесь фон строки,
+   а не вещь поверх неё, и лишний div под это заводить незачем. */
 .bookrow {
     display: flex; justify-content: space-between; align-items: baseline; gap: var(--s-4);
     width: 100%; padding: var(--s-3) var(--s-2);
     font: inherit; text-align: left; color: inherit;
-    background: none; border: 0; border-bottom: var(--line); cursor: pointer;
+    border: 0; border-bottom: var(--line); cursor: pointer;
+    background: linear-gradient(
+        90deg,
+        var(--done-bg) var(--done-part, 0%),
+        transparent var(--done-part, 0%)
+    );
 }
-.bookrow:hover { background: var(--paper-deep); }
+/* При наведении заливка остаётся: иначе прогресс мигал бы под курсором. */
+.bookrow:hover {
+    background:
+        linear-gradient(90deg, var(--done-bg) var(--done-part, 0%), transparent var(--done-part, 0%)),
+        var(--paper-deep);
+}
 .bookrow__title { font-weight: 550; }
 .bookrow__meta { font-size: var(--t-xs); white-space: nowrap; }

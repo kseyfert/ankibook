@@ -1,6 +1,6 @@
 import { generateCards } from '../cards/generate.js';
 import { buildQueue, type Pending } from '../cards/queue.js';
-import { appendCard, contextsFor, loadCards, loadDictionary } from '../library/files.js';
+import { appendCard, contextsFor, currentUser, loadCards, loadDictionary } from '../library/files.js';
 import { llmIfConfigured } from '../llm/index.js';
 import { loadSession, updateJob, type JobState } from './session.js';
 
@@ -14,10 +14,16 @@ import { loadSession, updateJob, type JobState } from './session.js';
  * Прогон идёт минутами и стоит запроса к модели на карточку — потерять его
  * от обновления вкладки или перезапуска нельзя.
  */
-let running: Promise<void> | null = null;
-let cancelling = false;
+/**
+ * Задача на пользователя, а не одна на процесс.
+ *
+ * Прогон Веры не должен ни мешать прогону Кеши, ни отменяться его кнопкой:
+ * данные у них разные, и деньги тоже.
+ */
+const running = new Map<string, Promise<void>>();
+const cancelling = new Set<string>();
 
-export const isRunning = () => running !== null;
+export const isRunning = () => running.has(currentUser());
 
 /**
  * Остановить прогон.
@@ -40,8 +46,9 @@ export function cancelGeneration(): JobState | null {
   const s = loadSession();
   if (!s.job || s.job.status !== 'running') return s.job;
 
-  if (running) {
-    cancelling = true;
+  const user = currentUser();
+  if (running.has(user)) {
+    cancelling.add(user);
     return s.job;
   }
   return updateJob({ ...s.job, status: 'cancelled' }).job;
@@ -64,7 +71,8 @@ export class JobBusy extends Error {
  * таймауту раньше, чем модель дойдёт до десятой карточки.
  */
 export function startGeneration(limit: number): JobState {
-  if (running) throw new JobBusy();
+  const user = currentUser();
+  if (running.has(user)) throw new JobBusy();
 
   const s = loadSession();
   if (!s.bookHash) throw new Error('Книга не выбрана');
@@ -89,10 +97,10 @@ export function startGeneration(limit: number): JobState {
 
   const bookHash = s.bookHash;
 
-  cancelling = false;
-  running = (async () => {
+  cancelling.delete(user);
+  running.set(user, (async () => {
     for (const word of batch) {
-      if (cancelling) break;
+      if (cancelling.has(user)) break;
       // Примеры берутся из книги прохода, а если слова там нет — из любой,
       // где оно встречалось: в очереди лежат и отобранные раньше.
       await one(llm, word, contextsFor(word.lemma, word.books, bookHash), bookHash, job);
@@ -100,16 +108,16 @@ export function startGeneration(limit: number): JobState {
       updateJob(job);
     }
   })()
-    .then(() => { job.status = cancelling ? 'cancelled' : 'done'; })
+    .then(() => { job.status = cancelling.has(user) ? 'cancelled' : 'done'; })
     .catch((e: unknown) => {
       job.status = 'error';
       job.failed.push({ lemma: '—', error: (e as Error).message });
     })
     .finally(() => {
-      running = null;
-      cancelling = false;
+      running.delete(user);
+      cancelling.delete(user);
       updateJob(job);
-    });
+    }));
 
   return job;
 }

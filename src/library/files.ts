@@ -1,24 +1,51 @@
 import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { join } from 'node:path';
 import type { BookFacts, BookContexts, Card, DictEntry, ExportLogEntry, Profile } from './types.js';
+import { DEFAULT_USER, userDir as userPath } from './users.js';
 import { DEFAULT_PROFILE } from './types.js';
 
-export const USER_DIR = 'user';
-export const BOOKS_DIR = join(USER_DIR, 'books');
-export const EXPORTS_DIR = join(USER_DIR, 'exports');
+/**
+ * Где лежат данные того, за кого мы сейчас работаем.
+ *
+ * Пути стали функциями, а не константами: пользователей несколько, и папка
+ * зависит от того, чей запрос обрабатывается прямо сейчас.
+ *
+ * Текущий пользователь живёт в AsyncLocalStorage, а не в переменной модуля.
+ * Разница не теоретическая: генерация карточек идёт минутами, и за это время
+ * успевает прийти запрос другого пользователя. Простая переменная к тому
+ * моменту уже поменялась бы, и продолжение задачи записало бы карточки
+ * в чужую папку. Контекст же наследуется всеми await внутри задачи.
+ */
+const context = new AsyncLocalStorage<string>();
 
-const DICT = join(USER_DIR, 'dictionary.jsonl');
-const CARDS = join(USER_DIR, 'cards.jsonl');
-const EXPORT_LOG = join(USER_DIR, 'exports.jsonl');
-const PROFILE = join(USER_DIR, 'profile.json');
+/** Для CLI: у команды нет запросов, пользователь задаётся на весь процесс. */
+let processUser = DEFAULT_USER;
 
-export const bookFactsPath = (hash: string) => join(BOOKS_DIR, `${hash}.json`);
-export const bookTextPath = (hash: string) => join(BOOKS_DIR, `${hash}.txt`);
-export const bookContextsPath = (hash: string) => join(BOOKS_DIR, `${hash}.contexts.json`);
-export const bookExcludedPath = (hash: string) => join(BOOKS_DIR, `${hash}.excluded.json`);
+export const setProcessUser = (name: string) => { processUser = name; };
+
+/** Выполняет работу от имени пользователя. Все await внутри её унаследуют. */
+export const runAsUser = <T>(name: string, fn: () => T): T => context.run(name, fn);
+
+export const currentUser = (): string => context.getStore() ?? processUser;
+
+export const userDir = () => userPath(currentUser());
+export const booksDir = () => join(userDir(), 'books');
+export const exportsDir = () => join(userDir(), 'exports');
+
+export const dictPath = () => join(userDir(), 'dictionary.jsonl');
+export const cardsPath = () => join(userDir(), 'cards.jsonl');
+export const exportLogPath = () => join(userDir(), 'exports.jsonl');
+export const profilePath = () => join(userDir(), 'profile.json');
+export const sessionPath = () => join(userDir(), 'session.json');
+
+export const bookFactsPath = (hash: string) => join(booksDir(), `${hash}.json`);
+export const bookTextPath = (hash: string) => join(booksDir(), `${hash}.txt`);
+export const bookContextsPath = (hash: string) => join(booksDir(), `${hash}.contexts.json`);
+export const bookExcludedPath = (hash: string) => join(booksDir(), `${hash}.excluded.json`);
 
 export function ensureDirs(): void {
-  for (const d of [USER_DIR, BOOKS_DIR, EXPORTS_DIR]) {
+  for (const d of [userDir(), booksDir(), exportsDir()]) {
     if (!existsSync(d)) mkdirSync(d, { recursive: true });
   }
 }
@@ -70,14 +97,18 @@ export function loadContexts(hash: string): BookContexts {
  * Кэш контекстов по книгам.
  *
  * Файл на книгу — сотни килобайт, а генерация спрашивает его по разу
- * на слово. Устареть кэш не может: ключ — хэш файла, у изменившейся книги
- * будет другой ключ.
+ * на слово. Устареть кэш не может: хэш считается от содержимого файла,
+ * у изменившейся книги будет другой ключ.
+ *
+ * В ключе ещё и пользователь: хэш у одной и той же книги общий, а файлы
+ * лежат в разных папках. Без имени контексты Веры доставались бы Кеше.
  */
 const contextCache = new Map<string, BookContexts>();
 
 function cachedContexts(hash: string): BookContexts {
-  let c = contextCache.get(hash);
-  if (!c) { c = loadContexts(hash); contextCache.set(hash, c); }
+  const key = `${currentUser()}/${hash}`;
+  let c = contextCache.get(key);
+  if (!c) { c = loadContexts(hash); contextCache.set(key, c); }
   return c;
 }
 
@@ -102,10 +133,10 @@ export function contextsFor(lemma: string, books: string[], prefer?: string): st
 const SIDECARS = ['.contexts.json', '.excluded.json'];
 
 export function listBooks(): BookFacts[] {
-  if (!existsSync(BOOKS_DIR)) return [];
-  return readdirSync(BOOKS_DIR)
+  if (!existsSync(booksDir())) return [];
+  return readdirSync(booksDir())
     .filter((f) => f.endsWith('.json') && !SIDECARS.some((s) => f.endsWith(s)))
-    .map((f) => withBounds(JSON.parse(readFileSync(join(BOOKS_DIR, f), 'utf8')) as BookFacts))
+    .map((f) => withBounds(JSON.parse(readFileSync(join(booksDir(), f), 'utf8')) as BookFacts))
     .sort((a, b) => a.addedAt.localeCompare(b.addedAt));
 }
 
@@ -139,8 +170,8 @@ export function saveExcluded(hash: string, lemmas: Iterable<string>): void {
 /** hash книги → её исключённые леммы. Для пересборки словаря целиком. */
 export function loadAllExcluded(): Map<string, Set<string>> {
   const m = new Map<string, Set<string>>();
-  if (!existsSync(BOOKS_DIR)) return m;
-  for (const f of readdirSync(BOOKS_DIR)) {
+  if (!existsSync(booksDir())) return m;
+  for (const f of readdirSync(booksDir())) {
     if (!f.endsWith('.excluded.json')) continue;
     const hash = f.slice(0, -'.excluded.json'.length);
     m.set(hash, loadExcluded(hash));
@@ -155,7 +186,7 @@ export function loadAllExcluded(): Map<string, Set<string>> {
  * грепается и нормально выглядит в git diff — при слиянии книги меняются
  * отдельные строки, а не весь файл целиком.
  */
-export function loadDictionary(path = DICT): Map<string, DictEntry> {
+export function loadDictionary(path = dictPath()): Map<string, DictEntry> {
   const m = new Map<string, DictEntry>();
   if (!existsSync(path)) return m;
   for (const line of readFileSync(path, 'utf8').split('\n')) {
@@ -166,7 +197,7 @@ export function loadDictionary(path = DICT): Map<string, DictEntry> {
   return m;
 }
 
-export function saveDictionary(entries: Map<string, DictEntry>, path = DICT): void {
+export function saveDictionary(entries: Map<string, DictEntry>, path = dictPath()): void {
   ensureDirs();
   const lines = [...entries.values()]
     .sort((a, b) => a.lemma.localeCompare(b.lemma))
@@ -174,7 +205,6 @@ export function saveDictionary(entries: Map<string, DictEntry>, path = DICT): vo
   writeFileSync(path, lines.join('\n') + '\n');
 }
 
-export const dictPath = DICT;
 
 // ─── карточки ──────────────────────────────────────────────────────────
 
@@ -184,8 +214,8 @@ export const dictPath = DICT;
  * а не весь прогон.
  */
 export function loadCards(): Card[] {
-  if (!existsSync(CARDS)) return [];
-  return readFileSync(CARDS, 'utf8')
+  if (!existsSync(cardsPath())) return [];
+  return readFileSync(cardsPath(), 'utf8')
     .split('\n')
     .filter((l) => l.trim())
     .map((l) => JSON.parse(l) as Card);
@@ -193,7 +223,7 @@ export function loadCards(): Card[] {
 
 export function appendCard(card: Card): void {
   ensureDirs();
-  appendFileSync(CARDS, JSON.stringify(card) + '\n');
+  appendFileSync(cardsPath(), JSON.stringify(card) + '\n');
 }
 
 /**
@@ -205,16 +235,15 @@ export function appendCard(card: Card): void {
  */
 export function saveCards(cards: Card[]): void {
   ensureDirs();
-  writeFileSync(CARDS, cards.map((c) => JSON.stringify(c)).join('\n') + '\n');
+  writeFileSync(cardsPath(), cards.map((c) => JSON.stringify(c)).join('\n') + '\n');
 }
 
-export const cardsPath = CARDS;
 
 // ─── выгрузки ──────────────────────────────────────────────────────────
 
 export function loadExportLog(): ExportLogEntry[] {
-  if (!existsSync(EXPORT_LOG)) return [];
-  return readFileSync(EXPORT_LOG, 'utf8')
+  if (!existsSync(exportLogPath())) return [];
+  return readFileSync(exportLogPath(), 'utf8')
     .split('\n')
     .filter((l) => l.trim())
     .map((l) => JSON.parse(l) as ExportLogEntry);
@@ -222,13 +251,13 @@ export function loadExportLog(): ExportLogEntry[] {
 
 export function appendExportLog(entry: ExportLogEntry): void {
   ensureDirs();
-  appendFileSync(EXPORT_LOG, JSON.stringify(entry) + '\n');
+  appendFileSync(exportLogPath(), JSON.stringify(entry) + '\n');
 }
 
 /** Перезапись журнала целиком — нужна только откату выгрузки. */
 export function saveExportLog(entries: ExportLogEntry[]): void {
   ensureDirs();
-  writeFileSync(EXPORT_LOG, entries.map((e) => JSON.stringify(e)).join('\n') + (entries.length ? '\n' : ''));
+  writeFileSync(exportLogPath(), entries.map((e) => JSON.stringify(e)).join('\n') + (entries.length ? '\n' : ''));
 }
 
 export function removeExportCsv(file: string): void {
@@ -248,9 +277,9 @@ export function readExportCsv(file: string): string {
  */
 export function writeExportCsv(date: string, deck: string, body: string): string {
   ensureDirs();
-  let file = join(EXPORTS_DIR, `${date}-${deck}.csv`);
+  let file = join(exportsDir(), `${date}-${deck}.csv`);
   for (let n = 2; existsSync(file); n++) {
-    file = join(EXPORTS_DIR, `${date}-${deck}-${n}.csv`);
+    file = join(exportsDir(), `${date}-${deck}-${n}.csv`);
   }
   writeFileSync(file, body);
   return file;
@@ -259,6 +288,6 @@ export function writeExportCsv(date: string, deck: string, body: string): string
 // ─── профиль ───────────────────────────────────────────────────────────
 
 export function loadProfile(): Profile {
-  if (!existsSync(PROFILE)) return { ...DEFAULT_PROFILE };
-  return { ...DEFAULT_PROFILE, ...JSON.parse(readFileSync(PROFILE, 'utf8')) };
+  if (!existsSync(profilePath())) return { ...DEFAULT_PROFILE };
+  return { ...DEFAULT_PROFILE, ...JSON.parse(readFileSync(profilePath(), 'utf8')) };
 }

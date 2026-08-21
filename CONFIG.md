@@ -6,7 +6,7 @@
 |---|---|---|
 | `.env` (в `.gitignore`) | секреты | `ANTHROPIC_API_KEY` |
 | `src/config/tuning.ts` | поведение системы: пороги, веса, лимиты | `saturation`, `speakWeights` |
-| `user/profile.json` | описание пользователя | `knownZipf` |
+| `users/<имя>/profile.json` | описание пользователя | `knownZipf` |
 | аргументы команды | параметры одного запуска | `--limit 30` |
 
 Приоритет: аргументы команды → значения в `src/config/tuning.ts`.
@@ -26,7 +26,7 @@
 
 ---
 
-## `user/profile.json`
+## `users/<имя>/profile.json`
 
 Описывает **пользователя**, а не систему. Отдельно от `tuning.json`, потому что
 у разных людей значения разные, а пороги скоринга — общие.
@@ -219,7 +219,7 @@ src/
 prompts/     тексты промптов в markdown
 data/        частотная таблица
 tools/       генератор частотной таблицы (Python, запускается вручную)
-user/        данные пользователя (в .gitignore, кроме .gitkeep)
+users/       папка на пользователя (в .gitignore, кроме .gitkeep)
 ```
 
 | папка | модули |

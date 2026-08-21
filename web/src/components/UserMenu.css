@@ -1,0 +1,72 @@
+.um { position: relative; }
+
+/* Без рамки: зверёк на цветной плитке сам по себе достаточно заметен,
+   а лишний контур рядом с ним читается как вторая рамка вокруг первой. */
+.um__button {
+    display: inline-flex; align-items: center; gap: var(--s-2);
+    padding: var(--s-1);
+    font: inherit; font-size: var(--t-sm); color: var(--ink);
+    background: none; border: 0; border-radius: var(--radius);
+    cursor: pointer;
+    transition: background 120ms;
+}
+.um__button:hover { background: var(--paper-deep); }
+.um__name { font-weight: 550; }
+
+/* Плитка: цвет из имени, зверёк поверх. Квадрат со скруглением, а не круг —
+   зверёк нарисован в квадратном поле, и круг срезал бы ему уши. */
+.avatar {
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: var(--radius); overflow: hidden;
+    color: #fff; font-weight: 600; flex: none;
+}
+/* Картинка чуть шире плитки и сдвинута вниз: у critters фигура стоит
+   в нижней части поля, и при точной посадке сверху остаётся пустота. */
+.avatar__img { width: 118%; height: 118%; object-fit: cover; object-position: 50% 12%; }
+
+.avatar--sm { width: 34px; height: 34px; font-size: var(--t-sm); }
+.avatar--md { width: 32px; height: 32px; font-size: var(--t-sm); }
+
+.um__menu {
+    position: absolute; top: calc(100% + var(--s-2)); right: 0; z-index: 10;
+    min-width: 220px;
+    background: var(--paper-lift);
+    border: var(--line); border-radius: var(--radius);
+    /* Тень, а не только рамка: меню лежит поверх страницы, и край должен
+       читаться даже там, где под ним такой же светлый фон. */
+    box-shadow: 0 6px 20px rgb(0 0 0 / 12%);
+    padding: var(--s-2);
+}
+
+.um__list { list-style: none; margin: 0; padding: 0; }
+.um__item {
+    display: flex; align-items: center; gap: var(--s-2);
+    width: 100%; padding: var(--s-2);
+    font: inherit; font-size: var(--t-sm); color: inherit; text-align: left;
+    background: none; border: 0; border-radius: var(--radius); cursor: pointer;
+}
+.um__item:hover { background: var(--paper-deep); }
+.um__item--on { font-weight: 600; }
+.um__item-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.um__new {
+    display: flex; gap: var(--s-1); align-items: center;
+    margin-top: var(--s-2); padding-top: var(--s-2); border-top: var(--line);
+}
+.um__input {
+    flex: 1; min-width: 0; padding: var(--s-1) var(--s-2);
+    font: inherit; font-size: var(--t-sm); color: inherit;
+    background: var(--paper); border: var(--line); border-radius: var(--radius);
+}
+.um__input:focus { outline: none; border-color: var(--speak); }
+
+.um__plus {
+    width: 26px; height: 26px; flex: none;
+    font: inherit; font-size: var(--t-md); line-height: 1;
+    color: var(--ink); background: var(--paper-deep);
+    border: var(--line); border-radius: var(--radius); cursor: pointer;
+}
+.um__plus:hover:not(:disabled) { background: var(--speak); border-color: var(--speak); color: var(--paper); }
+.um__plus:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.um__error { margin: var(--s-2) 0 0; font-size: var(--t-xs); color: var(--warn); }

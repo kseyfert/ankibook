@@ -1,6 +1,13 @@
 import { loadCards, loadDictionary } from '../library/files.js';
 import { planExport, runExport } from '../library/export.js';
 
+import { setProcessUser } from '../library/files.js';
+import { DEFAULT_USER } from '../library/users.js';
+import { argStr } from '../config/index.js';
+
+// За кого работаем: `--user Вера`. Без флага — Default.
+setProcessUser(argStr('user', DEFAULT_USER));
+
 const cards = loadCards();
 if (!cards.length) {
   console.error('Нет карточек. Сначала: npm run generate');

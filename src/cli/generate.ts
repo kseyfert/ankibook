@@ -3,8 +3,14 @@ import { tuning, argNum } from '../config/index.js';
 import { generateCards } from '../cards/generate.js';
 import { buildQueue } from '../cards/queue.js';
 import {
-  loadDictionary, listBooks, contextsFor, loadCards, appendCard, cardsPath,
+  loadDictionary, listBooks, contextsFor, loadCards, appendCard, cardsPath, setProcessUser,
 } from '../library/files.js';
+
+import { DEFAULT_USER } from '../library/users.js';
+import { argStr } from '../config/index.js';
+
+// За кого работаем: `--user Вера`. Без флага — Default.
+setProcessUser(argStr('user', DEFAULT_USER));
 
 const LIMIT = argNum('limit', tuning.generation.defaultLimit);
 

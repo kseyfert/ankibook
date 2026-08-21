@@ -5,17 +5,38 @@ import { session } from './routes/session.js';
 import { decisions } from './routes/decisions.js';
 import { cards } from './routes/cards.js';
 import { exports } from './routes/export.js';
+import { users } from './routes/users.js';
 import { VersionConflict } from './session.js';
 import { rebuild, applyNext } from '../library/rebuild.js';
+import { runAsUser } from '../library/files.js';
+import { DEFAULT_USER, validName } from '../library/users.js';
 import { loadProfile, saveExcluded, bookExists } from '../library/files.js';
 
 const app = new Hono();
+
+/**
+ * Кто пришёл — из заголовка, а не из состояния сервера.
+ *
+ * Сервер про «текущего пользователя» ничего не помнит: помнит браузер,
+ * и присылает с каждым запросом. Иначе две вкладки под разными людьми
+ * дрались бы за одну переменную, а перезапуск сервера терял бы, кто есть кто.
+ *
+ * Имя идёт в путь к папке, поэтому проверяется здесь же: `..` или слэш
+ * означали бы чтение и запись мимо users/. Экранирования не нужно —
+ * допустимы только латиница, цифры, дефис и подчёркивание.
+ */
+app.use('/api/*', async (c, next) => {
+  const name = c.req.header('x-user')?.trim() || DEFAULT_USER;
+  if (!validName(name)) return c.json({ error: `Недопустимое имя пользователя: ${name}` }, 400);
+  return runAsUser(name, next);
+});
 
 app.route('/api/books', books);
 app.route('/api/session', session);
 app.route('/api/decisions', decisions);
 app.route('/api/cards', cards);
 app.route('/api/export', exports);
+app.route('/api/users', users);
 
 /**
  * Применить отбор со шага 3: записать отказы и пересобрать словарь.

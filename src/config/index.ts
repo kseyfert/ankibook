@@ -17,3 +17,13 @@ export function argNum(name: string, fallback: number): number {
 export function argFlag(name: string): boolean {
   return process.argv.includes(`--${name}`);
 }
+/**
+ * Строковый параметр команды: --user Вера
+ *
+ * У CLI нет запросов, поэтому пользователь задаётся на весь процесс.
+ */
+export function argStr(name: string, fallback: string): string {
+  const i = process.argv.indexOf(`--${name}`);
+  if (i === -1 || i + 1 >= process.argv.length) return fallback;
+  return process.argv[i + 1];
+}

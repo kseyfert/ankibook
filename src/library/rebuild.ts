@@ -1,11 +1,14 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { listBooks, loadDictionary, saveDictionary, loadAllExcluded, dictPath, USER_DIR } from './files.js';
+import {
+  listBooks, loadDictionary, saveDictionary, loadAllExcluded, dictPath, userDir,
+} from './files.js';
 import { SKIP_POS } from './pos.js';
 import type { DictEntry, Profile } from './types.js';
 import { zipf } from './freq.js';
 
-export const NEXT_PATH = join(USER_DIR, 'dictionary.next.jsonl');
+/** Путь, а не константа: у каждого пользователя свой черновик словаря. */
+export const nextPath = () => join(userDir(), 'dictionary.next.jsonl');
 
 /**
  * Отказы пользователя: hash книги → леммы, которые он из неё не взял.
@@ -138,11 +141,11 @@ export function rebuild(
 }
 
 export function writeNext(entries: Map<string, DictEntry>): void {
-  saveDictionary(entries, NEXT_PATH);
+  saveDictionary(entries, nextPath());
 }
 
 export function applyNext(entries: Map<string, DictEntry>): void {
-  saveDictionary(entries, dictPath);
+  saveDictionary(entries, dictPath());
 }
 
-export const hasNext = () => existsSync(NEXT_PATH);
+export const hasNext = () => existsSync(nextPath());

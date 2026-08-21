@@ -190,8 +190,21 @@ export class ConflictError extends Error {
   }
 }
 
+/**
+ * За кого работаем. Держится здесь, а не передаётся в каждый вызов:
+ * пользователь — свойство всей работы, а не отдельного запроса.
+ */
+let user = 'Default';
+
+export const setApiUser = (name: string) => { user = name; };
+
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`/api${path}`, init);
+  const res = await fetch(`/api${path}`, {
+    ...init,
+    // Без кодирования: допустимые имена — латиница, цифры, дефис
+    // и подчёркивание, всё это заголовок несёт как есть.
+    headers: { ...init?.headers, 'x-user': user },
+  });
   const body = await res.json();
   if (res.status === 409) throw new ConflictError(body.session);
   if (!res.ok) throw new Error(body.error ?? `Ошибка ${res.status}`);
@@ -229,6 +242,9 @@ export const api = {
     req<{ card: CardView }>(`/cards/${id}`, { ...json(patch), method: 'PATCH' }),
   deselect: (deselected: string[], version: number) =>
     req<Session>('/cards/deselect', json({ deselected, version })),
+
+  listUsers: () => req<{ users: string[] }>('/users'),
+  createUser: (name: string) => req<{ name: string; users: string[] }>('/users', json({ name })),
 
   exportState: () => req<ExportState>('/export'),
   runExport: (version: number) => req<ExportResult>('/export', json({ version })),

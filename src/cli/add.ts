@@ -1,7 +1,18 @@
 import { addBook } from '../library/add-book.js';
 import { llmIfConfigured } from '../llm/index.js';
 
-const path = process.argv[2];
+import { setProcessUser } from '../library/files.js';
+import { DEFAULT_USER } from '../library/users.js';
+import { argStr } from '../config/index.js';
+
+// За кого работаем: `--user Вера`. Без флага — Default.
+setProcessUser(argStr('user', DEFAULT_USER));
+
+// Первый аргумент, который не флаг и не его значение: `--user` может
+// стоять и перед путём к книге.
+const rest = process.argv.slice(2);
+const flag = rest.indexOf('--user');
+const path = rest.filter((_, i) => i !== flag && i !== flag + 1)[0];
 if (!path) { console.error('usage: npm run add -- <file>'); process.exit(1); }
 
 // Без ключа книга разбирается как раньше — не будет только догадки

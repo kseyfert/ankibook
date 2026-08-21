@@ -7,6 +7,13 @@ import type { BookContexts, DeckStatus } from '../library/types.js';
 
 import { tuning, argNum } from '../config/index.js';
 
+import { setProcessUser } from '../library/files.js';
+import { DEFAULT_USER } from '../library/users.js';
+import { argStr } from '../config/index.js';
+
+// За кого работаем: `--user Вера`. Без флага — Default.
+setProcessUser(argStr('user', DEFAULT_USER));
+
 const TOP_SPEAK = argNum('speak', tuning.review.topSpeak);
 const TOP_READ = argNum('read', tuning.review.topRead);
 const SHOW_CONTEXTS = tuning.contexts.maxShown;

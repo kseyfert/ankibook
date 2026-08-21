@@ -1,7 +1,14 @@
 import { unlinkSync } from 'node:fs';
-import { rebuild, writeNext, applyNext, NEXT_PATH, hasNext } from '../library/rebuild.js';
+import { rebuild, writeNext, applyNext, nextPath, hasNext } from '../library/rebuild.js';
 import { loadProfile } from '../library/files.js';
 import { argFlag } from '../config/index.js';
+
+import { setProcessUser } from '../library/files.js';
+import { DEFAULT_USER } from '../library/users.js';
+import { argStr } from '../config/index.js';
+
+// За кого работаем: `--user Вера`. Без флага — Default.
+setProcessUser(argStr('user', DEFAULT_USER));
 
 const apply = argFlag('apply');
 const profile = loadProfile();
@@ -34,10 +41,10 @@ console.log(`\nкандидатов к отбору: ${diff.candidates}`);
 
 if (apply) {
   applyNext(entries);
-  if (hasNext()) unlinkSync(NEXT_PATH);
+  if (hasNext()) unlinkSync(nextPath());
   console.log('\ndictionary.jsonl обновлён.');
 } else {
   writeNext(entries);
-  console.log(`\nзаписано в ${NEXT_PATH}`);
+  console.log(`\nзаписано в ${nextPath()}`);
   console.log('основной словарь не тронут; для применения: npm run rebuild -- --apply');
 }

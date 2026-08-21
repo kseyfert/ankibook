@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { StepHeader } from './components/StepHeader';
+import { UserMenu, savedUser, switchUser } from './components/UserMenu';
 import { Step1Start } from './steps/Step1Start';
 import { Step2Book } from './steps/Step2Book';
 import { Step3Diff } from './steps/Step3Diff';
@@ -17,6 +18,8 @@ export default function App() {
     goTo, pickBook, saveDecisions, applyDecisions, saveDeselected, runExport, undoExport, reset,
   } = useSession();
   const [book, setBook] = useState<BookInfo | null>(null);
+  /** Выбранный пользователь. Его данные лежат в users/<имя>/. */
+  const [user] = useState(savedUser);
 
   if (!session) return <div className="app muted">Загружаю…</div>;
 
@@ -24,7 +27,10 @@ export default function App() {
 
   return (
     <div className="app">
-      <StepHeader current={step} />
+      <div className="topbar">
+        <StepHeader current={step} />
+        <UserMenu user={user} onChange={switchUser} />
+      </div>
       {conflict && <p className="banner">{conflict}</p>}
 
       {step === 1 && (

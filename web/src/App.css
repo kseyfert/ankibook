@@ -1,3 +1,12 @@
+/* Шаги и пользователь на одной строке. Черта под ними общая — она отделяет
+   всю шапку от работы, а не шаги от пользователя. */
+.topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: var(--s-4); flex-wrap: wrap;
+    padding-bottom: var(--s-3); margin-bottom: var(--s-6);
+    border-bottom: var(--line);
+}
+
 .banner {
     padding: var(--s-2) var(--s-3);
     border-left: 2px solid var(--warn);

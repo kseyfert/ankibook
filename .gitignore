@@ -12,9 +12,9 @@ yarn-error.log*
 .idea
 .claude
 
-/user/**
-!/user/**/
-!/user/**/.gitkeep
+/users/**
+!/users/**/
+!/users/**/.gitkeep
 
 .env
 

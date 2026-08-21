@@ -1,6 +1,5 @@
 import { readFileSync, writeFileSync, existsSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
-import { USER_DIR, ensureDirs } from '../library/files.js';
+import { ensureDirs, sessionPath } from '../library/files.js';
 import type { Decision } from '../library/decisions.js';
 
 /**
@@ -14,7 +13,8 @@ import type { Decision } from '../library/decisions.js';
  * и минут, терять её при перезапуске или обновлении вкладки нельзя.
  */
 
-const PATH = join(USER_DIR, 'session.json');
+/** Своя у каждого пользователя: положение в мастере — часть его данных. */
+const PATH = sessionPath;
 
 export type { Decision };
 
@@ -59,9 +59,9 @@ export const emptySession = (): Session => ({
 });
 
 export function loadSession(): Session {
-  if (!existsSync(PATH)) return emptySession();
+  if (!existsSync(PATH())) return emptySession();
   try {
-    const saved = JSON.parse(readFileSync(PATH, 'utf8')) as Partial<Session>;
+    const saved = JSON.parse(readFileSync(PATH(), 'utf8')) as Partial<Session>;
     // Поля, добавленные позже, в старом файле просто отсутствуют, а тип
     // обещает их наличие. Достраиваем до полной формы здесь, один раз:
     // иначе каждый, кто читает сессию, обязан помнить, какого поля могло
@@ -77,7 +77,7 @@ export function loadSession(): Session {
 export function saveSession(s: Session): Session {
   ensureDirs();
   const next = { ...s, version: s.version + 1 };
-  writeFileSync(PATH, JSON.stringify(next, null, 2));
+  writeFileSync(PATH(), JSON.stringify(next, null, 2));
   return next;
 }
 
@@ -96,12 +96,12 @@ export function saveSession(s: Session): Session {
 export function updateJob(job: JobState | null): Session {
   const next = { ...loadSession(), job };
   ensureDirs();
-  writeFileSync(PATH, JSON.stringify(next, null, 2));
+  writeFileSync(PATH(), JSON.stringify(next, null, 2));
   return next;
 }
 
 export function clearSession(): void {
-  if (existsSync(PATH)) rmSync(PATH);
+  if (existsSync(PATH())) rmSync(PATH());
 }
 
 /** Ошибка расхождения версий: клиент работал с устаревшей копией. */

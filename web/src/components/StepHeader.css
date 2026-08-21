@@ -1,7 +1,6 @@
+/* Черта и отступ под шапкой заданы в .topbar: шаги там не одни. */
 .steps {
     display: flex; flex-wrap: wrap; gap: var(--s-4);
-    padding-bottom: var(--s-4); margin-bottom: var(--s-6);
-    border-bottom: var(--line);
     font-size: var(--t-xs); letter-spacing: 0.02em;
 }
 .steps__item { display: inline-flex; align-items: baseline; gap: var(--s-2); color: var(--ink-soft); }

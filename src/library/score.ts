@@ -1,4 +1,4 @@
-import type { DictEntry, Profile } from './types.js';
+import type { Deck, DictEntry, Profile } from './types.js';
 import { tuning } from '../config/index.js';
 
 /**
@@ -20,7 +20,7 @@ import { tuning } from '../config/index.js';
 
 const CONTENT_POS = new Set(['NOUN', 'VERB', 'ADJ', 'ADV']);
 
-export type Deck = 'speak' | 'read';
+export type { Deck };
 
 export interface Candidate {
   entry: DictEntry;

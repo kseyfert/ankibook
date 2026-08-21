@@ -71,7 +71,28 @@ export function useSession() {
     [guard, accept],
   );
 
+  const saveDeselected = useCallback(
+    (ids: string[]) => guard(() => api.deselect(ids, version.current).then(accept)),
+    [guard, accept],
+  );
+
+  const runExport = useCallback(
+    () => guard(() => api.runExport(version.current).then((r) => { accept(r.session); return r; })),
+    [guard, accept],
+  );
+
+  const undoExport = useCallback(
+    () => guard(() => api.undoExport().then((r) => { accept(r.session); return r; })),
+    [guard, accept],
+  );
+
+  /** Перечитать состояние сервера. Версию не проверяет — это чтение. */
+  const refresh = useCallback(() => api.getSession().then(accept), [accept]);
+
   const reset = useCallback(() => api.resetSession().then(accept), [accept]);
 
-  return { session, conflict, accept, guard, goTo, pickBook, saveDecisions, applyDecisions, reset };
+  return {
+    session, conflict, accept, guard, refresh,
+    goTo, pickBook, saveDecisions, applyDecisions, saveDeselected, runExport, undoExport, reset,
+  };
 }

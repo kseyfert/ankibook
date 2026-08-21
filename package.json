@@ -14,10 +14,11 @@
     "ingest": "tsx --env-file-if-exists=.env src/cli/ingest.ts",
     "tokens": "tsx src/cli/tokens.ts",
     "typecheck": "tsc",
-    "server": "tsx --env-file-if-exists=.env watch src/server/index.ts",
-    "web": "vite --config web/vite.config.ts",
-    "dev": "concurrently -n api,web -c magenta,cyan \"npm:server\" \"npm:web\"",
     "typecheck:web": "tsc -p web/tsconfig.json",
+    "server": "tsx --env-file-if-exists=.env src/server/index.ts",
+    "server:watch": "tsx watch --env-file-if-exists=.env src/server/index.ts",
+    "web": "vite --config web/vite.config.ts",
+    "dev": "concurrently -n api,web -c magenta,cyan \"npm:server:watch\" \"npm:web\"",
     "build:web": "vite build --config web/vite.config.ts"
   },
   "dependencies": {

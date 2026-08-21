@@ -46,6 +46,9 @@ export type BookContexts = Record<string, string[]>;
 
 // ─── user/dictionary.jsonl ─────────────────────────────────────────────
 
+/** Колода. Слово попадает ровно в одну: произносить умеешь — узнаешь и так. */
+export type Deck = 'speak' | 'read';
+
 export type DeckStatus = 'new' | 'proposed' | 'rejected' | 'accepted' | 'known';
 
 export interface DictEntry {
@@ -61,6 +64,40 @@ export interface DictEntry {
   books: Record<string, number>;
   speak: DeckStatus;
   read: DeckStatus;
+}
+
+// ─── user/cards.jsonl ──────────────────────────────────────────────────
+
+export interface Card {
+  id: string;
+  lemma: string;
+  deck: Deck;
+  /** null, если значение одно */
+  sense: string | null;
+  front: string;
+  back: string;
+  /** ответ — для валидации; в CSV не идёт */
+  answer: string;
+  bookHash: string;
+  createdAt: string;
+  /** замечания валидатора; непустой список — в экспорт не пойдёт */
+  problems: string[];
+}
+
+// ─── user/exports.jsonl ────────────────────────────────────────────────
+
+/**
+ * Запись журнала выгрузок.
+ *
+ * Журнал, а не статусы слов, отвечает на вопрос «что уже уехало»: карточка
+ * могла быть создана в одном прогоне, а выгружена в другом.
+ */
+export interface ExportLogEntry {
+  date: string;
+  deck: Deck;
+  file: string;
+  count: number;
+  lemmas: string[];
 }
 
 // ─── user/profile.json ─────────────────────────────────────────────────

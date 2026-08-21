@@ -23,5 +23,7 @@ decisions.post('/apply', async (c) => {
   const counts = { speak: 0, read: 0, known: 0, rejected: 0 };
   for (const choice of Object.values(s.decisions)) counts[choice]++;
 
-  return c.json({ applied, counts, session: saveSession({ ...s, step: 5 }) });
+  // job обнуляется: шаг карточек отличает «ещё не запускали» от «уже был
+  // прогон» именно по нему, и хвост прошлого прохода сбил бы это различие.
+  return c.json({ applied, counts, session: saveSession({ ...s, step: 5, job: null }) });
 });

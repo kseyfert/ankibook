@@ -12,7 +12,15 @@ export interface Session {
   bookHash: string | null;
   decisions: Record<string, Decision>;
   deselected: string[];
-  job: null | { id: string; status: string; done: number; total: number };
+  /** файлы, записанные выгрузкой этого прохода */
+  exported: string[];
+  job: null | {
+    id: string;
+    status: 'running' | 'done' | 'error' | 'cancelled';
+    done: number;
+    total: number;
+    failed: Array<{ lemma: string; error: string }>;
+  };
 }
 
 export interface BookSummary {
@@ -116,6 +124,65 @@ export interface Candidates {
   words: { speak: CandidateWord[]; read: CandidateWord[] };
 }
 
+export interface Pending {
+  /** сколько слов ждёт генерации */
+  total: number;
+  speak: number;
+  read: number;
+  running: boolean;
+  defaultLimit: number;
+  /** сколько взять самому, если карточек ещё нет */
+  autoStart: number;
+}
+
+export interface CardView {
+  id: string;
+  lemma: string;
+  deck: 'speak' | 'read';
+  /** null, если у слова одно значение */
+  sense: string | null;
+  front: string;
+  back: string;
+  /** замечания валидатора; непустой список — в экспорт не пойдёт */
+  problems: string[];
+  selected: boolean;
+}
+
+export interface CardList {
+  cards: CardView[];
+  clean: number;
+  flagged: number;
+  /** уже уехали в Noji: показывать нечего, но и молчать про них нельзя */
+  exported: number;
+}
+
+export interface ExportEntry {
+  date: string;
+  deck: 'speak' | 'read';
+  file: string;
+  count: number;
+  lemmas: string[];
+}
+
+export interface ExportFile extends ExportEntry {
+  csv: string;
+}
+
+export interface ExportState {
+  /** уже записанное этим проходом; пусто — выгрузки ещё не было */
+  files: ExportFile[];
+  /** сколько карточек готово уехать */
+  pending: number;
+  skipped: { flagged: number; deselected: number; already: number };
+  history: ExportEntry[];
+}
+
+export interface ExportResult {
+  files: ExportFile[];
+  skipped: ExportState['skipped'];
+  session: Session;
+}
+
 /** Расхождение версий: кто-то менял сессию в другой вкладке. */
 export class ConflictError extends Error {
   constructor(public readonly session: Session) {
@@ -151,6 +218,21 @@ export const api = {
       '/decisions/apply',
       json({ version }),
     ),
+
+  getPending: () => req<Pending>('/cards/pending'),
+  generate: (limit: number) => req<{ job: Session['job'] }>('/cards/generate', json({ limit })),
+  cancelJob: () => req<{ job: Session['job'] }>('/cards/cancel', { method: 'POST' }),
+  listCards: () => req<CardList>('/cards'),
+  regenerateCard: (id: string) =>
+    req<{ card: CardView }>(`/cards/${id}/regenerate`, { method: 'POST' }),
+  editCard: (id: string, patch: { front?: string; back?: string }) =>
+    req<{ card: CardView }>(`/cards/${id}`, { ...json(patch), method: 'PATCH' }),
+  deselect: (deselected: string[], version: number) =>
+    req<Session>('/cards/deselect', json({ deselected, version })),
+
+  exportState: () => req<ExportState>('/export'),
+  runExport: (version: number) => req<ExportResult>('/export', json({ version })),
+  undoExport: () => req<{ undone: number; session: Session }>('/export/undo', { method: 'POST' }),
 
   listBooks: () => req<BookSummary[]>('/books'),
   uploadBook: (file: File) => {

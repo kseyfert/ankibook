@@ -1,0 +1,10 @@
+.iconbtn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px; padding: 0;
+    background: none; border: 0; border-radius: var(--radius);
+    color: var(--ink-soft); cursor: pointer;
+    transition: background 120ms, color 120ms;
+}
+/* Фон при наведении светлее рамки, на которой кнопка лежит. */
+.iconbtn:hover { background: var(--paper); color: var(--ink); }
+.iconbtn:disabled { opacity: 0.4; cursor: not-allowed; }

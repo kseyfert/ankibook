@@ -3,6 +3,8 @@ import { serve } from '@hono/node-server';
 import { books } from './routes/books.js';
 import { session } from './routes/session.js';
 import { decisions } from './routes/decisions.js';
+import { cards } from './routes/cards.js';
+import { exports } from './routes/export.js';
 import { VersionConflict } from './session.js';
 import { rebuild, applyNext } from '../library/rebuild.js';
 import { loadProfile, saveExcluded, bookExists } from '../library/files.js';
@@ -12,6 +14,8 @@ const app = new Hono();
 app.route('/api/books', books);
 app.route('/api/session', session);
 app.route('/api/decisions', decisions);
+app.route('/api/cards', cards);
+app.route('/api/export', exports);
 
 /**
  * Применить отбор со шага 3: записать отказы и пересобрать словарь.

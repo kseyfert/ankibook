@@ -4,13 +4,18 @@ import { Step1Start } from './steps/Step1Start';
 import { Step2Book } from './steps/Step2Book';
 import { Step3Diff } from './steps/Step3Diff';
 import { Step4Select } from './steps/Step4Select';
+import { Step5Cards } from './steps/Step5Cards';
+import { Step6Export } from './steps/Step6Export';
 import { useSession } from './hooks/useSession';
 import type { BookInfo } from './api';
 import './styles/base.css';
 import './App.css';
 
 export default function App() {
-  const { session, conflict, accept, goTo, pickBook, saveDecisions, applyDecisions, reset } = useSession();
+  const {
+    session, conflict, accept, refresh,
+    goTo, pickBook, saveDecisions, applyDecisions, saveDeselected, runExport, undoExport, reset,
+  } = useSession();
   const [book, setBook] = useState<BookInfo | null>(null);
 
   if (!session) return <div className="app muted">Загружаю…</div>;
@@ -58,11 +63,22 @@ export default function App() {
         </div>
       )}
 
-      {step >= 5 && (
-        <div className="stack">
-          <p className="muted">Генерация карточек — следующий шаг, ещё не собран.</p>
-          <button className="linklike" onClick={() => reset()}>Начать заново</button>
-        </div>
+      {step === 5 && (
+        <Step5Cards
+          job={session.job}
+          onRefresh={refresh}
+          onDeselect={saveDeselected}
+          onNext={() => goTo(6)}
+          onBack={() => reset()}
+        />
+      )}
+
+      {step >= 6 && (
+        <Step6Export
+          onRun={runExport}
+          onUndo={undoExport}
+          onRestart={() => reset()}
+        />
       )}
     </div>
   );

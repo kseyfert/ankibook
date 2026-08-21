@@ -1,0 +1,118 @@
+.cards__title { font-size: var(--t-xl); font-weight: 650; letter-spacing: -0.02em; margin: 0; }
+.cards__note { font-size: var(--t-xs); margin: 0; }
+.cards__run { flex-wrap: wrap; gap: var(--s-4); }
+/* Очередь прижата влево, управление — вправо: слева состояние, справа действие. */
+.cards__queue { font-size: var(--t-sm); margin-inline-end: auto; }
+.cards__progress { font-size: var(--t-sm); margin-inline-end: auto; }
+.cards__actions { padding-top: var(--s-4); border-top: var(--line); }
+
+.bar { height: 4px; background: var(--paper-deep); border-radius: 2px; overflow: hidden; }
+.bar__fill { height: 100%; background: var(--speak); transition: width 200ms; }
+
+/* Ожидание ответа на запуск: сколько будет всего, ещё не известно,
+   поэтому полоса не измеряет, а показывает, что процесс пошёл. */
+.bar--wait .bar__fill { width: 30%; animation: bar-wait 1.1s ease-in-out infinite; }
+@keyframes bar-wait {
+    0%   { margin-inline-start: 0; }
+    50%  { margin-inline-start: 70%; }
+    100% { margin-inline-start: 0; }
+}
+
+.cardlist { list-style: none; margin: 0; padding: 0; }
+
+.card {
+    display: grid; grid-template-columns: 24px 1fr; gap: var(--s-3);
+    padding: var(--s-3) 0; border-bottom: var(--line);
+}
+/* К верхней строке, а не к середине: карточка бывает в три строки,
+   и галочка уезжала бы к переводу вместо слова. */
+.card__check { align-self: start; margin-top: 4px; accent-color: var(--speak); cursor: pointer; }
+.card__check:disabled { cursor: not-allowed; }
+/* Снятая карточка остаётся на месте: решение пересматривают, а не ищут заново. */
+.card--off .card__body { opacity: 0.4; }
+
+.card__head { display: flex; align-items: baseline; gap: var(--s-2); flex-wrap: wrap; }
+.card__lemma { font-weight: 600; }
+.card__sense { font-size: var(--t-xs); }
+.card__wait { font-size: var(--t-xs); margin-inline-start: auto; }
+
+/* Колода окрашена так же, как везде: цвет здесь несёт смысл, а не украшает. */
+.card__deck {
+    font-size: var(--t-xs); padding: 0 var(--s-2); border-radius: var(--radius);
+}
+.card__deck--speak { background: var(--speak-bg); color: var(--speak); }
+.card__deck--read  { background: var(--read-bg); color: var(--read); }
+
+/* Две стороны рядом — так карточку и увидят при повторении.
+   На узкой странице встают друг под друга: сжимать текст до колонки
+   в двадцать знаков бессмысленно, читать его всё равно не выйдет. */
+.card__sides {
+    display: grid; gap: var(--s-3);
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    /* Уже полной ширины: карточка должна выглядеть карточкой, а растянутая
+       во всю страницу читается как абзац в рамке. */
+    max-width: 600px;
+    margin-top: var(--s-2);
+}
+
+/* Цвет колоды задаётся один раз переменной: дальше и рамка, и поле, и всё,
+   что появится потом, берут его отсюда, а не повторяют условие. */
+.side--speak { --deck: var(--speak); --deck-bg: var(--speak-bg); }
+.side--read  { --deck: var(--read);  --deck-bg: var(--read-bg); }
+
+/* Внешняя рамка в цвет колоды, внутри светлое поле под текстом.
+   Двойная граница — не украшение: она отличает speak от read с одного
+   взгляда, когда в списке вперемешку десятки карточек. */
+.side {
+    display: flex; flex-direction: column;
+    padding: var(--s-2);
+    /* Полоса рамки замешивается из самого цвета колоды, а не берётся
+       из готового бледного тона: так насыщенность — одно число здесь,
+       а не правка токена, от которого зависят кнопки и значки на других
+       экранах. Строка выше — запас для браузера без color-mix.
+
+       Подмешивается СВЕТЛАЯ поверхность, а не полотно страницы: полотно
+       серо-зелёное и любой цвет об него глохнет до грязного. */
+    background: var(--deck-bg);
+    background: color-mix(in srgb, var(--deck) 40%, var(--paper-lift));
+    border: 2px solid var(--deck);
+    border-radius: 12px;
+}
+
+.side__inner {
+    flex: 1;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 124px; padding: var(--s-3);
+    background: var(--paper-lift);
+    border: 1px solid var(--rule);
+    border-color: color-mix(in srgb, var(--deck) 35%, transparent);
+    border-radius: 6px;
+}
+
+.side__text { margin: 0; font-size: var(--t-sm); text-align: center; }
+
+/* Поле правки повторяет вид текста: правишь то, что видишь, а не его
+   отражение в чужом шрифте на чужом фоне. */
+.side__edit {
+    width: 100%; min-height: 96px; resize: vertical;
+    font: inherit; font-size: var(--t-sm); text-align: center; color: inherit;
+    background: none; border: 0; padding: 0;
+}
+.side__edit:focus { outline: none; }
+
+/* Пока сервер отвечает, сторона отзывается видом, а не пустотой:
+   перегенерация — это запрос к модели, она идёт секунды. */
+.side--busy .side__inner { opacity: 0.45; }
+
+/* Кнопки живут в поле рамки, под текстом: поверх светлого поля они
+   спорили бы с самим содержимым карточки. */
+.side__tools {
+    display: flex; justify-content: flex-end; gap: var(--s-1);
+    margin-top: var(--s-1); min-height: 24px;
+}
+.side__tools:empty { display: none; }
+
+.card__problem { margin: var(--s-2) 0 0; font-size: var(--t-xs); color: var(--warn); }
+
+/* Брак виден слева полосой: замечание внизу карточки легко пролистать. */
+.card--bad { border-left: 2px solid var(--warn); padding-left: var(--s-3); }

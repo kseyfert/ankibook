@@ -9,16 +9,18 @@ const n = (v: number) => v.toLocaleString('ru-RU');
 
 /** Порядок соответствует клавишам CLI: s, r, k, x. */
 const OPTIONS: Array<Option<Decision>> = [
-  { value: 'speak', label: 'Говорить', tone: 'speak' },
-  { value: 'read', label: 'Узнавать', tone: 'read' },
+  { value: 'speak', label: 'speak', tone: 'speak' },
+  { value: 'read', label: 'read', tone: 'read' },
   { value: 'known', label: 'Знаю' },
   { value: 'rejected', label: 'Не нужно' },
 ];
 
-const DECK_TITLE = {
-  speak: 'Активный словарь',
-  read: 'Только узнавание',
-} as const;
+/**
+ * Колоды зовутся так же, как в данных, в CSV и в README — speak и read.
+ * Перевод названия добавлял бы третье имя одной и той же вещи: в файле
+ * `speak`, на экране «говорить», в разговоре ещё как-нибудь.
+ */
+const DECK_TITLE = { speak: 'speak', read: 'read' } as const;
 
 const DECK_NOTE = {
   speak: 'Предложение с пропуском и русской подсказкой, ответ произносится вслух.',
@@ -176,7 +178,7 @@ export function Step4Select({
         <div className="sel__group">
           <h2 className={`sel__deck sel__deck--${deck}`}>{DECK_TITLE[deck]}</h2>
           <Button variant="quiet" onClick={() => setDeck(words, deck === 'speak' ? 'read' : 'speak')}>
-            Все в «{deck === 'speak' ? 'Узнавать' : 'Говорить'}»
+            Все в {deck === 'speak' ? 'read' : 'speak'}
           </Button>
           <Button variant="quiet" onClick={() => setDeck(words, 'rejected')}>Все не нужны</Button>
         </div>
@@ -209,8 +211,8 @@ export function Step4Select({
         <>
           <dl className="facts">
             <div><dt>Показано</dt><dd className="mono">{n(shown)}</dd></div>
-            <div><dt>Говорить</dt><dd className="mono">{n(counts.speak)}</dd></div>
-            <div><dt>Узнавать</dt><dd className="mono">{n(counts.read)}</dd></div>
+            <div><dt>speak</dt><dd className="mono">{n(counts.speak)}</dd></div>
+            <div><dt>read</dt><dd className="mono">{n(counts.read)}</dd></div>
             <div><dt>Отложено</dt><dd className="mono">{n(counts.known + counts.rejected)}</dd></div>
           </dl>
 

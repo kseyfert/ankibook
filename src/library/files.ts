@@ -1,6 +1,6 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
-import type { BookFacts, BookContexts, DictEntry, Profile } from './types.js';
+import type { BookFacts, BookContexts, Card, DictEntry, ExportLogEntry, Profile } from './types.js';
 import { DEFAULT_PROFILE } from './types.js';
 
 export const USER_DIR = 'user';
@@ -8,6 +8,8 @@ export const BOOKS_DIR = join(USER_DIR, 'books');
 export const EXPORTS_DIR = join(USER_DIR, 'exports');
 
 const DICT = join(USER_DIR, 'dictionary.jsonl');
+const CARDS = join(USER_DIR, 'cards.jsonl');
+const EXPORT_LOG = join(USER_DIR, 'exports.jsonl');
 const PROFILE = join(USER_DIR, 'profile.json');
 
 export const bookFactsPath = (hash: string) => join(BOOKS_DIR, `${hash}.json`);
@@ -62,6 +64,38 @@ export function loadBookText(hash: string): string {
 export function loadContexts(hash: string): BookContexts {
   const p = bookContextsPath(hash);
   return existsSync(p) ? (JSON.parse(readFileSync(p, 'utf8')) as BookContexts) : {};
+}
+
+/**
+ * Кэш контекстов по книгам.
+ *
+ * Файл на книгу — сотни килобайт, а генерация спрашивает его по разу
+ * на слово. Устареть кэш не может: ключ — хэш файла, у изменившейся книги
+ * будет другой ключ.
+ */
+const contextCache = new Map<string, BookContexts>();
+
+function cachedContexts(hash: string): BookContexts {
+  let c = contextCache.get(hash);
+  if (!c) { c = loadContexts(hash); contextCache.set(hash, c); }
+  return c;
+}
+
+/**
+ * Примеры для слова: сначала из предпочтительной книги, потом из любой,
+ * где оно встречалось.
+ *
+ * Брать только из книги текущего прохода нельзя: слово могло быть отобрано
+ * прошлым проходом по другой книге и остаться в очереди. Примеров в этой
+ * книге у него нет — и карточка не сделалась бы никогда.
+ */
+export function contextsFor(lemma: string, books: string[], prefer?: string): string[] {
+  const order = prefer ? [prefer, ...books.filter((h) => h !== prefer)] : books;
+  for (const hash of order) {
+    const found = cachedContexts(hash)[lemma];
+    if (found?.length) return found;
+  }
+  return [];
 }
 
 /** Сайдкары рядом с фактами книги. Всё, что не они, — сами факты. */
@@ -141,6 +175,86 @@ export function saveDictionary(entries: Map<string, DictEntry>, path = DICT): vo
 }
 
 export const dictPath = DICT;
+
+// ─── карточки ──────────────────────────────────────────────────────────
+
+/**
+ * JSONL и дозапись по одной: генерация идёт минутами и стоит денег.
+ * Упасть на середине — значит потерять только незаписанную карточку,
+ * а не весь прогон.
+ */
+export function loadCards(): Card[] {
+  if (!existsSync(CARDS)) return [];
+  return readFileSync(CARDS, 'utf8')
+    .split('\n')
+    .filter((l) => l.trim())
+    .map((l) => JSON.parse(l) as Card);
+}
+
+export function appendCard(card: Card): void {
+  ensureDirs();
+  appendFileSync(CARDS, JSON.stringify(card) + '\n');
+}
+
+/**
+ * Перезапись файла целиком — для правки и перегенерации.
+ *
+ * Дозапись тут не годится: карточка меняется на месте, а два JSON с одним
+ * id означали бы, что верной считается то первая, то последняя, смотря кто
+ * читает. Порядок сохраняется, потому что по нему человек их и просматривает.
+ */
+export function saveCards(cards: Card[]): void {
+  ensureDirs();
+  writeFileSync(CARDS, cards.map((c) => JSON.stringify(c)).join('\n') + '\n');
+}
+
+export const cardsPath = CARDS;
+
+// ─── выгрузки ──────────────────────────────────────────────────────────
+
+export function loadExportLog(): ExportLogEntry[] {
+  if (!existsSync(EXPORT_LOG)) return [];
+  return readFileSync(EXPORT_LOG, 'utf8')
+    .split('\n')
+    .filter((l) => l.trim())
+    .map((l) => JSON.parse(l) as ExportLogEntry);
+}
+
+export function appendExportLog(entry: ExportLogEntry): void {
+  ensureDirs();
+  appendFileSync(EXPORT_LOG, JSON.stringify(entry) + '\n');
+}
+
+/** Перезапись журнала целиком — нужна только откату выгрузки. */
+export function saveExportLog(entries: ExportLogEntry[]): void {
+  ensureDirs();
+  writeFileSync(EXPORT_LOG, entries.map((e) => JSON.stringify(e)).join('\n') + (entries.length ? '\n' : ''));
+}
+
+export function removeExportCsv(file: string): void {
+  rmSync(file, { force: true });
+}
+
+export function readExportCsv(file: string): string {
+  return existsSync(file) ? readFileSync(file, 'utf8') : '';
+}
+
+/**
+ * Пишет CSV и возвращает путь.
+ *
+ * Имя занято — берём следующее с номером. Раньше файл просто затирался,
+ * и вторая выгрузка за день оставляла в журнале две записи, указывающие
+ * на один файл с содержимым только последней.
+ */
+export function writeExportCsv(date: string, deck: string, body: string): string {
+  ensureDirs();
+  let file = join(EXPORTS_DIR, `${date}-${deck}.csv`);
+  for (let n = 2; existsSync(file); n++) {
+    file = join(EXPORTS_DIR, `${date}-${deck}-${n}.csv`);
+  }
+  writeFileSync(file, body);
+  return file;
+}
 
 // ─── профиль ───────────────────────────────────────────────────────────
 

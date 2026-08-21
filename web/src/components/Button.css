@@ -8,5 +8,8 @@
 .btn:hover:not(:disabled) { background: var(--paper-deep); }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .btn--primary { background: var(--speak); border-color: var(--speak); color: var(--paper); }
-.btn--primary:hover:not(:disabled) { filter: brightness(1.15); }
+/* Фон повторён намеренно: `.btn:hover` специфичнее, чем `.btn--primary`,
+   и без этой строки основная кнопка при наведении получала светло-серый фон
+   от общего правила, оставаясь со светлым текстом. Читалась как пустая. */
+.btn--primary:hover:not(:disabled) { background: var(--speak); filter: brightness(1.15); }
 .btn--quiet { border-color: transparent; color: var(--ink-soft); padding-inline: var(--s-2); }

@@ -1,0 +1,49 @@
+.exp__title { font-size: var(--t-xl); font-weight: 650; letter-spacing: -0.02em; margin: 0; }
+.exp__sub {
+    font-size: var(--t-sm); font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--ink-soft); margin: var(--s-5) 0 0;
+}
+.exp__lead { margin: 0; font-size: var(--t-md); }
+.exp__note { font-size: var(--t-xs); margin: 0; }
+.exp__actions { padding-top: var(--s-4); border-top: var(--line); }
+
+.exp__files { list-style: none; margin: 0; padding: 0; }
+.exp__files li {
+    display: flex; align-items: baseline; gap: var(--s-3);
+    padding: var(--s-2) 0; border-bottom: var(--line);
+    font-size: var(--t-sm);
+}
+/* Путь занимает всё место, счётчик прижат вправо — так столбцы
+   выстраиваются сами, без сетки на три строки. */
+.exp__path { flex: 1; word-break: break-all; }
+.exp__count { font-size: var(--t-xs); white-space: nowrap; }
+
+.panel__deck { font-size: var(--t-xs); padding: 0 var(--s-2); border-radius: var(--radius); }
+.panel__deck--speak { background: var(--speak-bg); color: var(--speak); }
+.panel__deck--read  { background: var(--read-bg); color: var(--read); }
+
+/* Панель с готовым CSV: рамка в цвет колоды, как у карточек, чтобы
+   speak и read не приходилось различать по подписи. */
+.panel {
+    border: var(--line); border-radius: var(--radius);
+    background: var(--paper-deep);
+    overflow: hidden;
+}
+.panel__head {
+    display: flex; align-items: center; gap: var(--s-2);
+    padding: var(--s-2) var(--s-2) var(--s-2) var(--s-3);
+}
+/* Имя занимает всё место, счётчик и кнопки прижаты вправо. */
+.panel__name { font-size: var(--t-sm); margin-inline-end: auto; }
+.panel__count { font-size: var(--t-xs); white-space: nowrap; }
+
+.panel__text {
+    display: block; width: 100%; height: 140px; resize: vertical;
+    padding: var(--s-3);
+    font-size: var(--t-xs); line-height: 1.6; color: var(--ink);
+    background: var(--paper-lift);
+    border: 0; border-top: var(--line);
+    /* Перенос ломал бы строки CSV: строка файла должна читаться строкой. */
+    white-space: pre; overflow: auto;
+}
+.panel__text:focus { outline: none; }

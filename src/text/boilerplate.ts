@@ -30,6 +30,30 @@ interface RawBounds {
 }
 
 /**
+ * Приводит ответ модели к одной паре цитат.
+ *
+ * Промпт просит один объект, но модель регулярно возвращает несколько
+ * вариантов подряд — а `extractJson` в таком случае отдаёт массив. Прочитав
+ * его как объект, получаешь `undefined` в обоих полях и молча теряешь
+ * границы: именно так на субтитрах терялась подпись релиз-группы в конце.
+ *
+ * Поля берутся НЕЗАВИСИМО, первое непустое по каждому. Выбирать «правильный»
+ * объект не нужно: настоящая проверка — поиск цитаты в своём окне, и негодная
+ * отсеется там же.
+ */
+function pickBounds(parsed: unknown): RawBounds {
+  const list = Array.isArray(parsed) ? parsed : [parsed];
+  const first = (key: keyof RawBounds): string | null => {
+    for (const item of list) {
+      const value = (item as RawBounds | null | undefined)?.[key];
+      if (typeof value === 'string' && value.trim()) return value;
+    }
+    return null;
+  };
+  return { firstWords: first('firstWords'), lastWords: first('lastWords') };
+}
+
+/**
  * Минимум слов, по которым признаём цитату найденной.
  * Четыре слова подряд — уже достаточно редкое совпадение, чтобы не поймать
  * чужой абзац; на трёх начинают ловиться служебные обороты.
@@ -165,8 +189,10 @@ export async function detectBookBounds(text: string, llm: LlmPort): Promise<Book
 
   let raw: RawBounds;
   try {
-    raw = extractJson<RawBounds>(
-      await llm.complete('', bookBoundsPrompt({ head: head.text, tail: tail.text })),
+    raw = pickBounds(
+      extractJson<unknown>(
+        await llm.complete('', bookBoundsPrompt({ head: head.text, tail: tail.text })),
+      ),
     );
   } catch {
     // Модель недоступна, ответ без JSON, сеть отвалилась — всё это значит
@@ -177,11 +203,11 @@ export async function detectBookBounds(text: string, llm: LlmPort): Promise<Book
   let start = 0;
   let end = last;
 
-  if (typeof raw?.firstWords === 'string') {
+  if (raw.firstWords) {
     const i = findLine(lines, head, raw.firstWords, 'start');
     if (i !== null) start = i;
   }
-  if (typeof raw?.lastWords === 'string') {
+  if (raw.lastWords) {
     const i = findLine(lines, tail, raw.lastWords, 'end');
     if (i !== null) end = i;
   }

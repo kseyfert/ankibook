@@ -3,6 +3,7 @@ import { extname, basename } from 'node:path';
 import { parseOffice } from 'officeparser';
 import { normalizeText, countWords } from './normalize.js';
 import { detectBookBounds } from './boilerplate.js';
+import { parseSrt } from './srt.js';
 import type { LlmPort } from '../llm/index.js';
 
 export interface DocMeta {
@@ -94,13 +95,18 @@ export async function ingest(path: string, llm: LlmPort | null): Promise<Documen
     // officeparser txt не поддерживает — парсить тут нечего, читаем напрямую
     blocks = readFileSync(path, 'utf8').split(/\r?\n[ \t]*\r?\n/);
     title = basename(path, ext);
+  } else if (ext === '.srt') {
+    // Субтитры officeparser тоже не знает. Название берём из имени файла,
+    // автора взять неоткуда — как у .txt.
+    blocks = parseSrt(readFileSync(path, 'utf8'));
+    title = basename(path, ext);
   } else if (OFFICE_FORMATS.has(ext)) {
     const r = await readOffice(path);
     ({ blocks, title, author } = r);
     warnings.push(...r.warnings);
   } else {
     throw new Error(
-      `Формат ${ext} не поддерживается. Доступны: .txt, ${[...OFFICE_FORMATS].join(', ')}`,
+      `Формат ${ext} не поддерживается. Доступны: .txt, .srt, ${[...OFFICE_FORMATS].join(', ')}`,
     );
   }
 

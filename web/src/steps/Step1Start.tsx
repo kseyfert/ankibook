@@ -47,13 +47,16 @@ export function Step1Start({
         }}
       >
         <p className="drop__lead">{busy ? 'Разбираю книгу…' : 'Перетащи файл книги сюда'}</p>
-        <p className="muted drop__formats mono">epub · txt · docx · rtf · odt · md · html · pdf</p>
+        {/* Только проверенные форматы. Остальное сервер тоже разберёт —
+            officeparser знает docx, rtf, odt, md, html и pdf, — но обещать
+            то, чего не гоняли на настоящих файлах, не стоит. */}
+        <p className="muted drop__formats mono">epub · txt · srt</p>
         <Button onClick={() => input.current?.click()} disabled={busy}>Выбрать файл</Button>
         <input
           ref={input}
           type="file"
           hidden
-          accept=".epub,.txt,.docx,.rtf,.odt,.md,.html,.pdf"
+          accept=".epub,.txt,.srt"
           onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); }}
         />
       </div>
@@ -78,7 +81,7 @@ export function Step1Start({
                 >
                   <span className="bookrow__title">{b.title ?? b.sourceName}</span>
                   <span className="muted bookrow__meta mono">
-                    {n(b.lemmaCount)} лемм · в словаре {n(b.inDictionary)} · в Noji {n(b.exported)}
+                    в словаре {n(b.inDictionary)} · в Noji {n(b.exported)}
                   </span>
                 </button>
               </li>

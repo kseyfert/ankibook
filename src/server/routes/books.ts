@@ -29,9 +29,7 @@ books.get('/', (c) => {
         sourceName: b.sourceName,
         addedAt: b.addedAt,
         wordCount: b.wordCount,
-        /** всего лемм в книге — сырой разбор, до всякой фильтрации */
-        lemmaCount: b.entries.length,
-        /** сколько из них ты решил взять в словарь */
+        /** сколько лемм книги ты решил взять в словарь */
         inDictionary: mine.length,
         /**
          * Сколько уже уехало в Noji.

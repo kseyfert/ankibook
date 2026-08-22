@@ -30,9 +30,7 @@ export interface BookSummary {
   sourceName: string;
   addedAt: string;
   wordCount: number;
-  /** всего лемм в книге — сырой разбор */
-  lemmaCount: number;
-  /** сколько из них взято в словарь */
+  /** сколько лемм книги взято в словарь */
   inDictionary: number;
   /** сколько уже уехало в Noji; слово могло уехать и с другой книгой */
   exported: number;

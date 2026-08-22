@@ -2,7 +2,6 @@ import { unlinkSync } from 'node:fs';
 import { rebuild, writeNext, applyNext, nextPath, hasNext } from '../library/rebuild.js';
 import { loadProfile } from '../library/files.js';
 import { argFlag } from '../config/index.js';
-
 import { setProcessUser } from '../library/files.js';
 import { DEFAULT_USER } from '../library/users.js';
 import { argStr } from '../config/index.js';

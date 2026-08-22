@@ -2,8 +2,7 @@ import { readdirSync, rmSync, existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { userDir, booksDir, exportsDir, currentUser, setProcessUser } from '../library/files.js';
-
-import { DEFAULT_USER } from '../library/users.js';
+import { DEFAULT_USER, listUsers, userDir as dirOf } from '../library/users.js';
 import { argStr } from '../config/index.js';
 
 // За кого работаем: `--user Вера`. Без флага — Default.
@@ -27,7 +26,16 @@ function scan(dir: string): string[] {
 const files = scan(userDir());
 
 if (!files.length) {
-  console.log('Данных нет, чистить нечего.');
+  // Кто именно пуст — важнее самого факта. Команда без флага берёт Default,
+  // и «данных нет» на чужой папке выглядит как пропажа данных.
+  console.log(`У пользователя ${currentUser()} данных нет, чистить нечего.`);
+
+  const others = listUsers()
+    .filter((name) => name !== currentUser() && scan(dirOf(name)).length > 0);
+  if (others.length) {
+    console.log(`\nДанные есть у: ${others.join(', ')}`);
+    console.log(`Чистить конкретного: npm run clean -- --user ${others[0]}`);
+  }
   process.exit(0);
 }
 

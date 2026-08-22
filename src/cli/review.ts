@@ -2,12 +2,11 @@ import { createInterface } from 'node:readline';
 import { selectCandidates, type Candidate } from '../library/score.js';
 import {
   loadDictionary, saveDictionary, loadProfile, listBooks, loadContexts,
+  setProcessUser, currentUser,
 } from '../library/files.js';
 import type { BookContexts, DeckStatus } from '../library/types.js';
 
 import { tuning, argNum } from '../config/index.js';
-
-import { setProcessUser } from '../library/files.js';
 import { DEFAULT_USER } from '../library/users.js';
 import { argStr } from '../config/index.js';
 
@@ -46,7 +45,7 @@ async function main(): Promise<void> {
   const profile = loadProfile();
   const books = listBooks();
   if (!books.length) {
-    console.error('Нет добавленных книг. Сначала: npm run add -- <file>');
+    console.error(`У пользователя ${currentUser()} нет книг. Сначала: npm run add -- <file>`);
     process.exit(1);
   }
   const book = books[books.length - 1];

@@ -3,9 +3,9 @@ import { tuning, argNum } from '../config/index.js';
 import { generateCards } from '../cards/generate.js';
 import { buildQueue } from '../cards/queue.js';
 import {
-  loadDictionary, listBooks, contextsFor, loadCards, appendCard, cardsPath, setProcessUser,
+  loadDictionary, listBooks, contextsFor, loadCards, appendCard, cardsPath,
+  setProcessUser, currentUser,
 } from '../library/files.js';
-
 import { DEFAULT_USER } from '../library/users.js';
 import { argStr } from '../config/index.js';
 
@@ -15,7 +15,7 @@ setProcessUser(argStr('user', DEFAULT_USER));
 const LIMIT = argNum('limit', tuning.generation.defaultLimit);
 
 const books = listBooks();
-if (!books.length) { console.error('Нет книг.'); process.exit(1); }
+if (!books.length) { console.error(`У пользователя ${currentUser()} нет книг.`); process.exit(1); }
 const book = books[books.length - 1];
 
 const { todo, speak, read } = buildQueue(loadDictionary(), loadCards());

@@ -147,6 +147,8 @@ export interface CardView {
   back: string;
   /** замечания валидатора; непустой список — в экспорт не пойдёт */
   problems: string[];
+  /** человек прочитал замечания и всё равно берёт карточку */
+  approved: boolean;
   selected: boolean;
 }
 
@@ -242,6 +244,8 @@ export const api = {
     req<{ card: CardView }>(`/cards/${id}/regenerate`, { method: 'POST' }),
   editCard: (id: string, patch: { front?: string; back?: string }) =>
     req<{ card: CardView }>(`/cards/${id}`, { ...json(patch), method: 'PATCH' }),
+  approveCard: (id: string, approved: boolean) =>
+    req<{ card: CardView }>(`/cards/${id}/approve`, json({ approved })),
   deselect: (deselected: string[], version: number) =>
     req<Session>('/cards/deselect', json({ deselected, version })),
 

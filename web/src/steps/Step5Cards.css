@@ -116,3 +116,13 @@
 
 /* Брак виден слева полосой: замечание внизу карточки легко пролистать. */
 .card--bad { border-left: 2px solid var(--warn); padding-left: var(--s-3); }
+
+/* Замечание, принятое человеком: карточка поедет, поэтому полоса слева
+   уже не тревожная — но и не исчезает. Брак остаётся браком, просто
+   осознанным, и при следующем проходе по списку это должно быть видно. */
+.card--passed { border-left: 2px solid color-mix(in srgb, var(--warn) 35%, transparent); padding-left: var(--s-3); }
+.card--passed .card__problem { opacity: 0.5; }
+
+/* Решение по замечанию стоит под ним: сначала читаешь, потом решаешь. */
+.card__verdict { gap: var(--s-2); margin-top: var(--s-1); }
+.card__verdict-note { font-size: var(--t-xs); }

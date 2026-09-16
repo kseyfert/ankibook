@@ -125,6 +125,8 @@ function CardRow({ card, onToggle, onChange }: {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const bad = card.problems.length > 0;
+  /** С замечаниями и без согласия человека — в экспорт не поедет. */
+  const blocked = bad && !card.approved;
 
   /** Любое изменение карточки: сервер отвечает новой версией, её и берём. */
   const apply = async (call: Promise<{ card: CardView }>) => {
@@ -140,12 +142,14 @@ function CardRow({ card, onToggle, onChange }: {
   };
 
   return (
-    <li className={`card${bad ? ' card--bad' : ''}${card.selected ? '' : ' card--off'}`}>
+    <li className={`card${blocked ? ' card--bad' : ''}${bad && card.approved ? ' card--passed' : ''}${card.selected ? '' : ' card--off'}`}>
+      {/* Задержанная карточка стоит с пустой галочкой, а не с серой
+          отмеченной: отмеченная обещает выгрузку, которой не будет. */}
       <input
         type="checkbox"
         className="card__check"
-        checked={card.selected}
-        disabled={bad}
+        checked={card.selected && !blocked}
+        disabled={blocked}
         onChange={onToggle}
         aria-label={`Выгружать ${card.lemma}`}
       />
@@ -177,6 +181,28 @@ function CardRow({ card, onToggle, onChange }: {
 
         {error && <p className="error card__problem">{error}</p>}
         {card.problems.map((p) => <p className="card__problem" key={p}>{p}</p>)}
+
+        {/* Последнее слово за человеком: валидатор ошибается в обе стороны,
+            и «контекст допускает anyway» бывает придиркой. Но сказать это
+            надо явно и на конкретный текст — молчаливого «выгружай всё
+            равно» здесь нет: из Noji карточку не забрать.
+
+            Согласие держится за теми замечаниями, что сейчас на экране.
+            Правка или перегенерация вернут карточку в брак сами. */}
+        {bad && (
+          <div className="row card__verdict">
+            {card.approved && (
+              <span className="muted card__verdict-note">Проверено вручную — поедет как есть</span>
+            )}
+            <Button
+              variant="quiet"
+              disabled={busy}
+              onClick={() => void apply(api.approveCard(card.id, !card.approved))}
+            >
+              {card.approved ? 'Вернуть замечание' : 'Выгрузить с замечанием'}
+            </Button>
+          </div>
+        )}
       </div>
     </li>
   );
@@ -289,7 +315,7 @@ export function Step5Cards({
     void onDeselect(next);
   };
 
-  const chosen = list.cards.filter((c) => c.selected && c.problems.length === 0).length;
+  const chosen = list.cards.filter((c) => c.selected && (c.problems.length === 0 || c.approved)).length;
 
   /** Панель управления прогоном. Рисуется и над списком, и под ним. */
   const bar = busy && !running ? <Starting /> : running && job ? (
@@ -334,12 +360,15 @@ export function Step5Cards({
                 key={c.id}
                 card={c}
                 onToggle={() => toggle(c)}
-                onChange={(next) => setList({
-                  ...list,
-                  cards: list.cards.map((x) => (x.id === next.id ? next : x)),
-                  clean: list.cards.filter((x) => (x.id === next.id ? next : x).problems.length === 0).length,
-                  flagged: list.cards.filter((x) => (x.id === next.id ? next : x).problems.length > 0).length,
-                })}
+                onChange={(next) => {
+                  const cards = list.cards.map((x) => (x.id === next.id ? next : x));
+                  setList({
+                    ...list,
+                    cards,
+                    clean: cards.filter((x) => x.problems.length === 0 || x.approved).length,
+                    flagged: cards.filter((x) => x.problems.length > 0 && !x.approved).length,
+                  });
+                }}
               />
             ))}
           </ul>

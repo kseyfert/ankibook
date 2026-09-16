@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { loadCards, loadDictionary, saveCards } from '../../library/files.js';
+import { isApproved } from '../../library/export.js';
 import { regenerateCard } from '../../cards/generate.js';
 import { editCard } from '../../cards/edit.js';
 import { llmIfConfigured } from '../../llm/index.js';
@@ -54,6 +55,8 @@ const view = (card: Card, deselected: string[]) => ({
   front: card.front,
   back: card.back,
   problems: card.problems,
+  /** замечания приняты человеком: карточка поедет вместе с ними */
+  approved: card.problems.length > 0 && isApproved(card),
   /** снятые галочкой в экспорт не пойдут */
   selected: !deselected.includes(card.id),
 });
@@ -74,8 +77,11 @@ cards.get('/', (c) => {
 
   return c.json({
     cards: list,
-    clean: list.filter((x) => x.problems.length === 0).length,
-    flagged: list.filter((x) => x.problems.length > 0).length,
+    // Готовые к выгрузке и задержанные: одобренная вручную карточка
+    // считается готовой — она поедет, и держать её в «браке» значит
+    // показывать человеку, что его решение ничего не изменило.
+    clean: list.filter((x) => x.problems.length === 0 || x.approved).length,
+    flagged: list.filter((x) => x.problems.length > 0 && !x.approved).length,
     // Чтобы «готово 2» при дюжине карточек в файле не читалось как потеря.
     exported: all.filter((card) => dict.get(card.lemma)?.[card.deck] === 'accepted').length,
   });
@@ -127,6 +133,31 @@ cards.patch('/:id', async (c) => {
     all[index] = editCard(all[index], body);
     saveCards(all);
     return c.json({ card: view(all[index], loadSession().deselected) });
+  } catch (e) {
+    return c.json(fail(e), e instanceof NotFound ? 404 : 400);
+  }
+});
+
+/**
+ * Согласие с замечаниями: человек прочитал их и всё равно берёт карточку.
+ *
+ * Пишется в карточку, а не в сессию: это суждение о конкретном тексте,
+ * а не черновик прохода. Переживает и перезагрузку вкладки, и «начать
+ * заново», и работает в CLI-выгрузке, которая сессии не знает.
+ *
+ * Одобряются ИМЕННО ТЕ замечания, что лежат в карточке сейчас: следующая
+ * правка или перегенерация даст другой список, и согласие обнулится само.
+ */
+cards.post('/:id/approve', async (c) => {
+  const body = await c.req.json<{ approved?: boolean }>().catch(() => ({}) as { approved?: boolean });
+  try {
+    const { cards: all, index } = editable(c.req.param('id'));
+    const card = all[index];
+    // Согласие с пустым списком — не решение, а мусор в файле.
+    if (body.approved === false || !card.problems.length) delete card.approved;
+    else card.approved = [...card.problems];
+    saveCards(all);
+    return c.json({ card: view(card, loadSession().deselected) });
   } catch (e) {
     return c.json(fail(e), e instanceof NotFound ? 404 : 400);
   }

@@ -25,6 +25,21 @@ export function exportedKeys(): Set<string> {
   return out;
 }
 
+/**
+ * Замечания сняты человеком?
+ *
+ * Сравниваем списки целиком: одобрение относится к тем замечаниям, которые
+ * человек видел. Стоит карточке измениться — правкой или перегенерацией —
+ * валидатор выдаёт другой список, совпадение пропадает, и брак снова
+ * не поедет. Сбрасывать одобрение отдельным шагом не нужно, а значит
+ * и забыть этот шаг негде.
+ */
+export function isApproved(card: Card): boolean {
+  if (!card.problems.length) return true;
+  const ok = card.approved ?? [];
+  return ok.length === card.problems.length && card.problems.every((p) => ok.includes(p));
+}
+
 export interface ExportPlan {
   ready: Record<Deck, Card[]>;
   /** сколько и почему не поедет */
@@ -34,8 +49,9 @@ export interface ExportPlan {
 /**
  * Что уйдёт в файлы. Ничего не пишет — нужен, чтобы показать это до нажатия.
  *
- * Карточка с замечаниями не выгружается никогда и ни при каких галочках:
- * из Noji её нельзя ни исправить, ни удалить, поэтому брак не выпускаем.
+ * Карточка с замечаниями не выгружается сама: из Noji её нельзя ни
+ * исправить, ни удалить, поэтому по умолчанию брак не выпускаем. Снять
+ * замечание может только человек и только руками — см. `isApproved`.
  */
 export function planExport(cards: Card[], deselected: string[] = []): ExportPlan {
   const done = exportedKeys();
@@ -45,7 +61,7 @@ export function planExport(cards: Card[], deselected: string[] = []): ExportPlan
 
   for (const card of cards) {
     if (done.has(key(card.lemma, card.deck))) { skipped.already++; continue; }
-    if (card.problems.length) { skipped.flagged++; continue; }
+    if (!isApproved(card)) { skipped.flagged++; continue; }
     if (off.has(card.id)) { skipped.deselected++; continue; }
     ready[card.deck].push(card);
   }

@@ -1,3 +1,9 @@
+/* Шрифты едут вместе со сборкой, а не с Google Fonts: инструмент открывается
+   и без сети, а без файлов шрифта браузер молча подставлял системный,
+   и на чужой машине интерфейс выглядел иначе. Вариативные — потому что
+   в стилях есть веса 550 и 650, которых в статических наборах нет. */
+@import '@fontsource-variable/inter-tight';
+@import '@fontsource-variable/jetbrains-mono';
 @import './tokens.css';
 
 *, *::before, *::after { box-sizing: border-box; }

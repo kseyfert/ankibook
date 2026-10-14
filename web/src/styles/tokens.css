@@ -26,8 +26,8 @@
 
     /* Типографика: гротеск для интерфейса, моноширинный для данных —
        частотность, счётчики и леммы читаются как таблица, а не как проза. */
-    --font-ui:   'Inter Tight', system-ui, -apple-system, sans-serif;
-    --font-data: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
+    --font-ui:   'Inter Tight Variable', system-ui, -apple-system, sans-serif;
+    --font-data: 'JetBrains Mono Variable', ui-monospace, 'SF Mono', monospace;
 
     --t-xs: 0.75rem;
     --t-sm: 0.875rem;
